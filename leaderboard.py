@@ -9,7 +9,7 @@ import configparser
 
 # variables
 logPath = "\\logs\\"
-configp = configparser.ConfigParser()
+configp = configparser.ConfigParser(strict=False)
 
 # load config
 with open("config/config.json") as config:
@@ -19,7 +19,9 @@ with open("config/config.json") as config:
     webhookurl = configJson["webhookurl"]
     folderidentifier = configJson["folderindentifier"]
     leaderboardlimit = configJson["leaderboardlimit"]
-    shmoovinurl = configJson["shmoovinurl"]
+    driftscript = configJson["shmoovindrifturl"]
+    overtakescript = configJson["shmoovinovertakeurl"]
+    shmoovinurl = driftscript + overtakescript
 
 # main loop
 while True:
@@ -51,11 +53,12 @@ while True:
                     loglines = f.readlines()
                 for logline in loglines:
                     x = re.search(".* \[INF\] CHAT:.* just scored a.*", logline)
-                    if str(x) != "None":
+                    xx = re.search(".* \[INF\] CHAT:.* Drift.", logline)
+                    if str(x) != "None" or str(xx) != "None":   
                         print(f"found score on: {logline.strip()}")
                         loglineArray = logline.split()
                         name = loglineArray[5]
-                        score = int(loglineArray[10])
+                        score = float(loglineArray[-1])
                         print(f"score is: {name} {score}")
                         # opens and reads leaderboard file, then writes scores to the file
                         with open(f"{serverspath}\\{file}\\leaderboard.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
@@ -69,7 +72,7 @@ while True:
                                     print (f"{name} was found in leaderboard file")
                                     leaderboardlineArray = leaderboardline.split(',')
                                     oldscore = leaderboardlineArray[1]
-                                    if score > int(oldscore):
+                                    if score > float(oldscore):
                                         entry = f"{name},{score}\n"
                                         leaderboardlines.remove(leaderboardline)
                                         leaderboardlinesnew.append(entry)
@@ -85,12 +88,12 @@ while True:
                             leaderboard.write(leaderboardwrite)
                 # sorts and sends top 10 leaderboard to discord webhook
                 scores = []
-                with open(f"{serverspath}\\{file}\\leaderboard.txt", 'r') as leaderboardfile:
+                with open(f"{serverspath}\\{file}\\leaderboard.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
                     for line in leaderboardfile:
                         name, score = line.split(',')
                         score = score.strip()
                         scores.append([name, score])
-                scores.sort(key=lambda s: int(s[1]), reverse = True)
+                scores.sort(key=lambda s: float(s[1]), reverse = True)
                 finallist = []
                 scorecounter = 0
                 scorelength = len(scores)
@@ -105,19 +108,25 @@ while True:
                         finallist.append(f"{scorecounter}. {score_format}\n")
                         finalstr = "".join(finallist)
                     else:
-                        break 
+                        break
                 # json format to send to the webhook
                 time.sleep(2)
-                cfgpath = f"{serverspath}\\{file}\\cfg\\server_cfg.ini"
-                configp.read(cfgpath)
+                configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
                 name = str(configp['SERVER']['NAME'])
+                configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
+                scripttype = str(configp['SCRIPT_...']['SCRIPT'])
+                scripttype = scripttype.replace("'","")
+                if scripttype  in overtakescript:
+                    description = "Shmoovin overtake leaderboard"
+                elif scripttype in driftscript:
+                    description = "Shmoovin drift leaderboard"
                 data = {"embeds": [
                         {
                             "title": name,
                             "description":"",
                             "fields": [
                                 {
-                                    "name": "Schmoovin leaderboard:",
+                                    "name": description,
                                     "value": finalstr
                                 }
                             ]
