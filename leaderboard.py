@@ -6,10 +6,8 @@ import glob
 from os.path import exists
 import re
 
-
 # variables
 logPath = "\\logs\\"
-# functions
 
 # load config
 with open("config/config.json") as config:
@@ -17,6 +15,8 @@ with open("config/config.json") as config:
     interval = configJson["interval"]
     serverspath = configJson["serverspath"]
     webhookurl = configJson["webhookurl"]
+    folderidentifier = configJson["folderidentifier"]
+    leaderboardlimit = configJson["leaderboardlimit"]
 
 # main loop
 while True:
@@ -25,7 +25,7 @@ while True:
     # loop trough folders in server folder
     for file in filenames:
         # checks if folder is actually a server folder
-        if "(server" in file.lower():
+        if folderidentifier in file.lower():
             if not exists(f"{serverspath}\\{file}\\leaderboard.txt"):
                 with open(f"{serverspath}\\{file}\\leaderboard.txt", 'w') as leaderboard:
                     leaderboard.write("")
@@ -83,8 +83,8 @@ while True:
             scorecounter = 0
             scorelength = len(scores)
             finalstr = "currently empty"
-            if scorelength >= 10:
-                scorelength = 10
+            if scorelength >= leaderboardlimit:
+                scorelength = leaderboardlimit
             for score in scores:
                 scorecounter = scorecounter + 1
                 if scorecounter <= scorelength:
