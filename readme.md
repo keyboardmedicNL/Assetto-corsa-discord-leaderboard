@@ -4,6 +4,9 @@ a server sided script that reads logs from assettoserver for shmoovin score entr
 
 it loops trough a parent folder housing all servers and uses a configurable identifier to identify server folders. if it sees a server folder it looks in that folder for a logs folder where it will then loop trough the last log file to find score entries. it will NOT work with different folder structures (example below). it saves the score to a leaderboard txt in the root of the server wich can be added manually to remove or reset scores.
 
+If there is no shmoovin script present in the csp config in the server folders cfg folder it will not trigger and leave the folder alone.
+It gets the server name from the server config.
+
 # how to use:
 1. create a config folder in the same folder as the script and make a config.json
 2. place the following code in the config.json and configure as needed:
