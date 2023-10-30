@@ -11,10 +11,6 @@ It gets the server name from the server config.
 1. install python on your system from the python website https://www.python.org/downloads/ make sure to select add python to path
 2. install the requests module trough pip with the following command in a terminal
 ```
-pip install requests
-```
-or
-```
 python -m pip install requests
 ```
 3. create a config folder in the same folder as the script and make a config.json
@@ -22,7 +18,7 @@ python -m pip install requests
 ```
 {
     "interval": time in minutes on how often the script should update the leaderboards,
-    "serverspath": "path/to/server_parent_folder",
+    "serverspath": "path/to/server_parent_folder (if using docker make this "servers")",
     "folderindentifier": "identifier to recognize server folder",
     "leaderboardlimit": how much entries should be displayed on the leaderboard,
     "webhookurl":"url to your discord webhook",
@@ -31,6 +27,11 @@ python -m pip install requests
 }
 ```
 5. save the file and run the script.
+
+* alternativly you can build your own docker image with the dockerfile provided or use mine with the following command
+```
+docker run -dit --name shmoovin-discord-leaderboard -v /path/to/assetto/servers:/usr/src/app/servers -v /path/to/config:/usr/src/app/config keyboardmedic/shmoovin-discord-leaderboard:latest
+```
 
 
 * example folder structure with the identifier set as "(server" :  
