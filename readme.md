@@ -8,9 +8,17 @@ If there is no shmoovin script present in the csp config in the server folders c
 It gets the server name from the server config.
 
 # how to use:
-1. install python on your system from the python website https://www.python.org/downloads/
-2. create a config folder in the same folder as the script and make a config.json
-3. place the following code in the config.json and configure as needed:
+1. install python on your system from the python website https://www.python.org/downloads/ make sure to select add python to path
+2. install the requests module trough pip with the following command in a terminal
+```
+pip install requests
+```
+or
+```
+python -m pip install requests
+```
+3. create a config folder in the same folder as the script and make a config.json
+4. place the following code in the config.json and configure as needed:
 ```
 {
     "interval": time in minutes on how often the script should update the leaderboards,
@@ -22,7 +30,7 @@ It gets the server name from the server config.
     "shmoovinovertakeurl":["url to overtake script"]
 }
 ```
-4. save the file and run the script.
+5. save the file and run the script.
 
 
 * example folder structure with the identifier set as "(server" :  
