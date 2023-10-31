@@ -54,7 +54,7 @@ def scorefind():
                 nameNoID = nameArray[1].split(" (")
                 x[0] = nameNoID[0]
                 name = x[0]
-                score = x[1]
+                score = float(x[1])
             elif str(x) != "None":  
                 hasscore = True 
                 print(f"found score on: {logline.strip()}")
