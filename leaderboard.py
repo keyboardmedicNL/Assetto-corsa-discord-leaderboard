@@ -6,6 +6,7 @@ import glob
 from os.path import exists
 import re
 import configparser
+import math
 
 # variables
 logPath = "\\logs\\"
@@ -30,7 +31,7 @@ def scorefind():
         with open(f"{serverspath}\\{file}\\leaderboard.txt", 'w') as leaderboard:
             leaderboard.write("")
             print("leaderboard was not found so it was created")
-    print(f"folder is a server with name: {file}")
+    print(f"folder being checked for shmoovin score: {file}")
     pathToLogs = f"{serverspath}\\{file}{logPath}*"
     list_of_files = glob.glob(pathToLogs)
     latest_file = max(list_of_files, key=os.path.getctime)
@@ -44,12 +45,26 @@ def scorefind():
             score = ""
             x = re.search(".* \[INF\] CHAT:.* just scored a.*", logline)
             xx = re.search(".* \[INF\] CHAT:.* Drift.", logline)
-            if str(x) != "None" or str(xx) != "None":  
+            if str(xx) != "None":
                 hasscore = True 
                 print(f"found score on: {logline.strip()}")
-                loglineArray = logline.split()
-                name = loglineArray[5]
-                score = float(loglineArray[-1])
+                x = logline.split(" Drift:")
+                print(x)
+                nameArray = x[0].split("CHAT: ")
+                nameNoID = nameArray[1].split(" (")
+                x[0] = nameNoID[0]
+                name = x[0]
+                score = x[1]
+            elif str(x) != "None":  
+                hasscore = True 
+                print(f"found score on: {logline.strip()}")
+                x = logline.split("): just scored a ")
+                print(x)
+                nameArray = x[0].split("CHAT: ")
+                x[0] = nameArray[1].split(" (")[0]
+                name = x[0]
+                score = float(x[1])
+            if hasscore: 
                 print(f"score is: {name} {score}")
                 with open(f"{serverspath}\\{file}\\leaderboard.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
@@ -62,11 +77,65 @@ def scorefind():
                             print (f"{name} was found in leaderboard file")
                             leaderboardlineArray = leaderboardline.split(',')
                             oldscore = leaderboardlineArray[1]
-                            if score > float(oldscore):
+                            if float(score) > float(oldscore):
                                 entry = f"{name},{score}\n"
                                 leaderboardlines.remove(leaderboardline)
                                 leaderboardlinesnew.append(entry)
                                 print(f"new record for {name} with score {score}")
+                    if wasfound == False:
+                        entry = f"{name},{score}\n"
+                        leaderboardlinesnew.append(entry)
+                    leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
+                    print(f"list to write: {leaderboardlinescomb}")
+                    leaderboardwrite = ''.join(leaderboardlinescomb)
+                    leaderboard.seek(0)
+                    leaderboard.truncate()
+                    leaderboard.write(leaderboardwrite)
+
+def timefind():
+    if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
+        with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
+            leaderboard.write("")
+            print("laptimes was not found so it was created")
+    print(f"folder being checked for laptimes: {file}")
+    pathToLogs = f"{serverspath}\\{file}{logPath}*"
+    list_of_files = glob.glob(pathToLogs)
+    latest_file = max(list_of_files, key=os.path.getctime)
+    print(f"Log file that is being read is: {latest_file}")
+    # opens and loops trough last logfile to find score entries and writes them to laptimes.txt
+    with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
+        loglines = f.readlines()
+        for logline in loglines:
+            hasscore = False
+            name = ""
+            score = ""
+            x = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
+            if str(x) != "None":  
+                hasscore = True 
+                print(f"found laptime on: {logline.strip()}")
+                x = logline.split(" cuts, laptime ")
+                print(x)
+                nameArray = x[0].split("Lap completed by ")
+                x[0] = nameArray[1].split(",")[0]
+                name = x[0]
+                score = float(x[1])
+                print(f"laptime is: {name} {score}")
+                with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                    leaderboardlinesnew = []
+                    wasfound = False
+                    leaderboardlines = leaderboard.readlines()
+                    print(f"file content before loop: {leaderboardlines}")
+                    for leaderboardline in leaderboardlines:
+                        if name in leaderboardline:
+                            wasfound = True
+                            print (f"{name} was found in laptimes file")
+                            leaderboardlineArray = leaderboardline.split(',')
+                            oldscore = leaderboardlineArray[1]
+                            if score > float(oldscore):
+                                entry = f"{name},{score}\n"
+                                leaderboardlines.remove(leaderboardline)
+                                leaderboardlinesnew.append(entry)
+                                print(f"new laptime for {name} with score {score}")
                     if wasfound == False:
                         entry = f"{name},{score}\n"
                         leaderboardlinesnew.append(entry)
@@ -88,6 +157,16 @@ def sortleaderboard():
     scores.sort(key=lambda s: float(s[1]), reverse = True)
     return(scores)
 
+def sorttimes():
+    scores = []
+    with open(f"{serverspath}\\{file}\\laptimes.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
+        for line in leaderboardfile:
+            name, score = line.split(',')
+            score = score.strip()
+            scores.append([name, score])
+    scores.sort(key=lambda s: float(s[1]), reverse = False)
+    return(scores)
+
 # formats scores to str to use in webhook
 def formatleaderboard(scores):
     finallist = []
@@ -107,8 +186,31 @@ def formatleaderboard(scores):
             break
     return(finalstr)
 
+#formats laptimes to str to use in webhook
+def formattimes(scores):
+    finallist = []
+    scorecounter = 0
+    scorelength = len(scores)
+    finalstr = "currently empty"
+    if scorelength >= leaderboardlimit:
+        scorelength = leaderboardlimit
+    for score in scores:
+        scorecounter = scorecounter + 1
+        if scorecounter <= scorelength:
+            laptime = float(score[1])
+            minutes= math.floor(laptime/(1000*60)%60)
+            laptime = (laptime-(minutes*(1000*60)))
+            seconds = (laptime/1000)
+            mili = laptime
+            score_format = f"{score[0]} {minutes}:{seconds}"
+            finallist.append(f"{scorecounter}. {score_format}\n")
+            finalstr = "".join(finallist)
+        else:
+            break
+    return(finalstr)
+
 # send leaderboard to discord
-def sendtowebhook(finalstr):
+def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
@@ -118,18 +220,132 @@ def sendtowebhook(finalstr):
         description = "Shmoovin overtake leaderboard"
     elif scripttype in driftscript:
         description = "Shmoovin drift leaderboard"
-    data = {"embeds": [
-            {
-                "title": name,
-                "description":"",
-                "fields": [
-                    {
-                        "name": description,
-                        "value": finalstr
-                    }
-                ]
-            }
-        ]}
+    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.ini"):
+        configp.read(f"{serverspath}\\{file}\\\\discordbotcfg.ini")
+        showtimes =str(configp['settings']['showlaptimes'])
+        if showtimes.lower() == "false":
+            finaltimes = "NA"
+        else:
+            finaltimes = finaltimes
+    else:
+        finaltimes = finaltimes
+    if onlyleaderboards.lower() == "false":
+        configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
+        httpport = str(configp['SERVER']['HTTP_PORT'])
+        serverhttp = f"{serveradress}:{httpport}"
+        rl = requests.get(f"http://{serverhttp}/INFO")
+        print(f"server info response is: {rl}")
+        if "200" in str(rl):
+            rljson = rl.json()
+            clients = rljson["clients"]
+            maxplayers = rljson["maxclients"]
+            status = ":green_circle: Online"
+            trackstr = rljson["track"]
+            tracklst = trackstr.split("/")
+            track = str(tracklst[-1])
+        else:
+            status = ":red_circle: Offline"
+            maxplayers = "NA"
+            clients = "NA"
+            track = "NA"
+    if onlyleaderboards.lower() == "false" and hasshmoovin == True:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": f":race_car:",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
+                        },
+                        {
+                            "name": "Status",
+                            "value": status,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Players",
+                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Track",
+                            "value": track,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Laptimes",
+                            "value": finaltimes
+                        },
+                        {
+                            "name": description,
+                            "value": finalstr
+                        }
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "false" and hasshmoovin == False:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": f":race_car:",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
+                        },
+                        {
+                            "name": "Status",
+                            "value": status,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Players",
+                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Track",
+                            "value": track,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Laptimes",
+                            "value": finaltimes
+                        },
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "true" and hasshmoovin == True:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": "Laptimes",
+                            "value": finaltimes
+                        },
+                        {
+                            "name": description,
+                            "value": finalstr
+                        }
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "true" and hasshmoovin == False:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": "Laptimes",
+                            "value": finaltimes
+                        }
+                    ]
+                }
+            ]}
     # checks if leaderboard message was allready created and updates it
     if exists(f"config/{file}.txt"):
         with open(f"config/{file}.txt") as File:
@@ -159,6 +375,9 @@ with open("config/config.json") as config:
     leaderboardlimit = configJson["leaderboardlimit"]
     driftscript = configJson["shmoovindrifturl"]
     overtakescript = configJson["shmoovinovertakeurl"]
+    onlyleaderboards = configJson["onlyleaderboards"]
+    serveradress = configJson["serveradress"]
+    serveradressdisplay = configJson["serveradressdisplay"]
     shmoovinurl = driftscript + overtakescript
 
 # main loop
@@ -169,11 +388,16 @@ while True:
     for file in filenames:
         # checks if folder is actually a server folder
         if folderidentifier in file.lower():
-           hasshmoovin = shmoovincheck()
-           if hasshmoovin == True:
-                    scorefind()
-                    scores = sortleaderboard()
-                    finalstr = formatleaderboard(scores)
-                    sendtowebhook(finalstr)
+            hasshmoovin = shmoovincheck()
+            if hasshmoovin == True:
+                scorefind()
+                scores = sortleaderboard()
+                finalstr = formatleaderboard(scores)
+            else:
+                finalstr="NA"
+            timefind()
+            times = sorttimes()
+            finaltimes = formattimes(times)        
+            sendtowebhook(finalstr,finaltimes,hasshmoovin)
     print(f"waiting for {interval} minutes")
     time.sleep(interval*60)
