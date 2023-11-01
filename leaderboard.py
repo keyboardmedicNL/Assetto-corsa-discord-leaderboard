@@ -141,7 +141,7 @@ def timefind():
                             print (f"{name} was found in laptimes file") # debug
                             leaderboardlineArray = leaderboardline.split(',')
                             oldscore = leaderboardlineArray[1]
-                            if score > float(oldscore):
+                            if score < float(oldscore):
                                 entry = f"{name},{score}\n"
                                 leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                                 leaderboardlinesnew.append(entry)
