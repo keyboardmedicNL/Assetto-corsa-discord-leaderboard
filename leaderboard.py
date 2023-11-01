@@ -233,21 +233,28 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
         configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
         httpport = str(configp['SERVER']['HTTP_PORT'])
         serverhttp = f"{serveradress}:{httpport}"
-        rl = requests.get(f"http://{serverhttp}/INFO")
-        print(f"server info response is: {rl}")
-        if "200" in str(rl):
-            rljson = rl.json()
-            clients = rljson["clients"]
-            maxplayers = rljson["maxclients"]
-            status = ":green_circle: Online"
-            trackstr = rljson["track"]
-            tracklst = trackstr.split("/")
-            track = str(tracklst[-1])
-        else:
+        try:
+            rl = requests.get(f"http://{serverhttp}/INFO")
+            print(f"server info response is: {rl}")
+            if "200" in str(rl):
+                rljson = rl.json()
+                clients = rljson["clients"]
+                maxplayers = rljson["maxclients"]
+                status = ":green_circle: Online"
+                trackstr = rljson["track"]
+                tracklst = trackstr.split("/")
+                track = str(tracklst[-1])
+            else:
+                status = ":red_circle: Offline"
+                maxplayers = "NA"
+                clients = "NA"
+                track = "NA"
+        except Exception as e:
             status = ":red_circle: Offline"
             maxplayers = "NA"
             clients = "NA"
             track = "NA"
+            print(f"an exception occured: {e}")
     if onlyleaderboards.lower() == "false" and hasshmoovin == True:
         data = {"embeds": [
                 {
