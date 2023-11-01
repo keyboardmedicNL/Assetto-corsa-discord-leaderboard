@@ -23,6 +23,7 @@ def shmoovincheck():
                 for url in shmoovinurl:
                     if url in line and not ";" in line:
                         hasshmoovin = True
+                        print(f"shmoovin script was found in server {file}")
     return(hasshmoovin)
 
 # reads log and extracts scores
@@ -30,12 +31,11 @@ def scorefind():
     if not exists(f"{serverspath}\\{file}\\leaderboard.txt"):
         with open(f"{serverspath}\\{file}\\leaderboard.txt", 'w') as leaderboard:
             leaderboard.write("")
-            print("leaderboard was not found so it was created")
-    print(f"folder being checked for shmoovin score: {file}")
+            print(f"leaderboard was not found so it was created for server {file}")
     pathToLogs = f"{serverspath}\\{file}{logPath}*"
     list_of_files = glob.glob(pathToLogs)
     latest_file = max(list_of_files, key=os.path.getctime)
-    print(f"Log file that is being read is: {latest_file}")
+    print(f"Log file that is being read is: {latest_file} for server {file}")
     # opens and loops trough last logfile to find score entries and writes them to leaderboard.txt
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
         loglines = f.readlines()
@@ -47,7 +47,7 @@ def scorefind():
             xx = re.search(".* \[INF\] CHAT:.* Drift.", logline)
             if str(xx) != "None":
                 hasscore = True 
-                print(f"found score on: {logline.strip()}")
+                print(f"found score on: {logline.strip()} for server {file}")
                 x = logline.split(" Drift:")
                 print(x)
                 nameArray = x[0].split("CHAT: ")
@@ -57,7 +57,7 @@ def scorefind():
                 score = float(x[1])
             elif str(x) != "None":  
                 hasscore = True 
-                print(f"found score on: {logline.strip()}")
+                print(f"found score on: {logline.strip()} for server {file}")
                 x = logline.split("): just scored a ")
                 print(x)
                 nameArray = x[0].split("CHAT: ")
@@ -65,26 +65,30 @@ def scorefind():
                 name = x[0]
                 score = float(x[1])
             if hasscore: 
-                print(f"score is: {name} {score}")
                 with open(f"{serverspath}\\{file}\\leaderboard.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
                     wasfound = False
                     leaderboardlines = leaderboard.readlines()
-                    print(f"file content before loop: {leaderboardlines}")
+                    print(f"file content before loop: {leaderboardlines}") # debug
                     for leaderboardline in leaderboardlines:
+                        if str(leaderboardline) == "\n":
+                            wasnewline = True
+                            print("ping")
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                         if name in leaderboardline:
                             wasfound = True
-                            print (f"{name} was found in leaderboard file")
+                            print (f"{name} was found in leaderboard file for server {file}") # debug
                             leaderboardlineArray = leaderboardline.split(',')
                             oldscore = leaderboardlineArray[1]
                             if float(score) > float(oldscore):
                                 entry = f"{name},{score}\n"
-                                leaderboardlines.remove(leaderboardline)
+                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                                 leaderboardlinesnew.append(entry)
-                                print(f"new record for {name} with score {score}")
+                                print(f"new record for {name} with score {score} for server {file}")
                     if wasfound == False:
                         entry = f"{name},{score}\n"
                         leaderboardlinesnew.append(entry)
+                        print(f"new record for {name} with score {score} on server {file}")
                     leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
                     print(f"list to write: {leaderboardlinescomb}")
                     leaderboardwrite = ''.join(leaderboardlinescomb)
@@ -96,12 +100,11 @@ def timefind():
     if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
         with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
             leaderboard.write("")
-            print("laptimes was not found so it was created")
-    print(f"folder being checked for laptimes: {file}")
+            print(f"laptimes was not found so it was created for server {file}")
     pathToLogs = f"{serverspath}\\{file}{logPath}*"
     list_of_files = glob.glob(pathToLogs)
     latest_file = max(list_of_files, key=os.path.getctime)
-    print(f"Log file that is being read is: {latest_file}")
+    print(f"Log file that is being read is: {latest_file} for server {file}")
     # opens and loops trough last logfile to find score entries and writes them to laptimes.txt
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
         loglines = f.readlines()
@@ -112,35 +115,39 @@ def timefind():
             x = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
             if str(x) != "None":  
                 hasscore = True 
-                print(f"found laptime on: {logline.strip()}")
+                print(f"found laptime on: {logline.strip()} for server {file}")
                 x = logline.split(" cuts, laptime ")
                 print(x)
                 nameArray = x[0].split("Lap completed by ")
                 x[0] = nameArray[1].split(",")[0]
                 name = x[0]
                 score = float(x[1])
-                print(f"laptime is: {name} {score}")
                 with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
                     wasfound = False
                     leaderboardlines = leaderboard.readlines()
-                    print(f"file content before loop: {leaderboardlines}")
+                    print(f"file content before loop: {leaderboardlines}") # debug
                     for leaderboardline in leaderboardlines:
+                        if str(leaderboardline) == "\n":
+                            wasnewline = True
+                            print("ping")
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                         if name in leaderboardline:
                             wasfound = True
-                            print (f"{name} was found in laptimes file")
+                            print (f"{name} was found in laptimes file") # debug
                             leaderboardlineArray = leaderboardline.split(',')
                             oldscore = leaderboardlineArray[1]
                             if score > float(oldscore):
                                 entry = f"{name},{score}\n"
-                                leaderboardlines.remove(leaderboardline)
+                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                                 leaderboardlinesnew.append(entry)
-                                print(f"new laptime for {name} with score {score}")
+                                print(f"new laptime for {name} with score {score} for server {file}")
                     if wasfound == False:
                         entry = f"{name},{score}\n"
                         leaderboardlinesnew.append(entry)
+                        print(f"new laptime for {name} with score {score} for server {file}")
                     leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                    print(f"list to write: {leaderboardlinescomb}")
+                    print(f"list to write: {leaderboardlinescomb}") # debug
                     leaderboardwrite = ''.join(leaderboardlinescomb)
                     leaderboard.seek(0)
                     leaderboard.truncate()
@@ -235,7 +242,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
         serverhttp = f"{serveradress}:{httpport}"
         try:
             rl = requests.get(f"http://{serverhttp}/INFO")
-            print(f"server info response is: {rl}")
+            print(f"server info response is: {rl} for server {file}")
             if "200" in str(rl):
                 rljson = rl.json()
                 clients = rljson["clients"]
@@ -254,7 +261,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             maxplayers = "NA"
             clients = "NA"
             track = "NA"
-            print(f"an exception occured: {e}")
+            print(f"an exception occured for server {file} {e}")
     if onlyleaderboards.lower() == "false" and hasshmoovin == True:
         data = {"embeds": [
                 {
