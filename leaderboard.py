@@ -75,6 +75,8 @@ def scorefind():
                             wasnewline = True
                             print("ping")
                             leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                        if "\n" not in str(leaderboardline):
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
                         if name in leaderboardline:
                             wasfound = True
                             print (f"{name} was found in leaderboard file for server {file}") # debug
@@ -132,6 +134,8 @@ def timefind():
                             wasnewline = True
                             print("ping")
                             leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                        if "\n" not in str(leaderboardline):
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
                         if name in leaderboardline:
                             wasfound = True
                             print (f"{name} was found in laptimes file") # debug
