@@ -240,7 +240,7 @@ def formattimesclass(scores,classcfg):
         scorelength = len(score)
         scorecounter = 0
         if scorelength > 0:
-            finallist.append(f"{str(classlist[i])}:\n")
+            finallist.append(f"\n***class: {str(classlist[i])}***:\n")
         if scorelength >= leaderboardlimit:
             scorelength = leaderboardlimit
         for classcore in scores[i]:
