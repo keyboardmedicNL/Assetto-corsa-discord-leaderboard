@@ -104,7 +104,7 @@ def timefind():
     # opens and loops trough last logfile to find score entries and writes them to laptimes.txt
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
         loglines = f.readlines()
-        for logline in loglines:
+        for il,logline in enumerate(loglines):
             hasscore = False
             name = ""
             score = ""
@@ -118,15 +118,16 @@ def timefind():
                 x[0] = nameArray[1].split(",")[0]
                 name = x[0]
                 score = float(x[1])
-                for carline in reversed(loglines):
-                    xxx = re.search(".* \[INF\] .* has connected", carline)
-                    if str(xxx) != "None" and str(name) in carline:
-                        print(f"found car on: {carline.strip()} for server {file}")
-                        x = carline.split(" (")
-                        carArray = x[2].split(")) has connected")
-                        car = carArray[0]
-                        print(f"car is {car}")
-                        break
+                for ic,carline in enumerate(reversed(loglines)):
+                    if ic > len(loglines)-il and ic < len(loglines):
+                        xxx = re.search(".* \[INF\] .* has connected", carline)
+                        if str(xxx) != "None" and str(name) in carline:
+                            print(f"found car on: {carline.strip()} for server {file}")
+                            x = carline.split(" (")
+                            carArray = x[2].split(")) has connected")
+                            car = carArray[0]
+                            print(f"car is {car}")
+                            break
                 with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
                     wasfound = False
