@@ -217,8 +217,13 @@ def formattimes(scores):
     if scorelength >= leaderboardlimit:
         scorelength = leaderboardlimit
     for score in scores:
+        allreadyin = False
+        name = score[1]
         scorecounter = scorecounter + 1
-        if scorecounter <= scorelength:
+        for entry in finallist:
+            if str(name) in str(entry):
+                allreadyin = True
+        if scorecounter <= scorelength and allreadyin != True:
             laptime = float(score[2])
             minutes= math.floor(laptime/(1000*60)%60)
             laptime = (laptime-(minutes*(1000*60)))
@@ -226,8 +231,6 @@ def formattimes(scores):
             score_format = f"{score[1]} {minutes}:{seconds}"
             finallist.append(f"{scorecounter}. {score_format}\n")
             finalstr = "".join(finallist)
-        else:
-            break
     return(finalstr)
 
 # formats laptimes if class configuration is present
