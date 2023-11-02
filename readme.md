@@ -1,7 +1,11 @@
 # what does it do:
 a server sided script that reads logs from assettoserver for lap times, shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks.
 
-![alt text](screenshot2.png)
+![alt text](screenshot3.png)
+
+![alt text](screenshot4.png)
+
+![alt text](screenshot5.png)
 
 it loops trough a parent folder housing all servers and uses a configurable identifier to identify server folders. if it sees a server folder it looks in that folder for a logs folder where it will then loop trough the last log file to find score entries. it will NOT work with different folder structures (example below). it saves the scores and laptimes to a leaderboard txt and a laptimes txt in the root of the server wich can be added manually to remove or reset scores.
 
@@ -34,12 +38,23 @@ python -m pip install requests
 ```
 5. save the file and run the script.
 
-* optionally to ignore laptimes for a certain server you can create a file in the server root with the name "discordbotcfg.ini"
+* optionally to ignore laptimes or sort by class for a certain server you can create a file in the server root with the name "discordbotcfg.json"
 in the file add the following lines:
 ```
-[settings]
+{
+"showlaptimes":"True",
+"classes":{
+    "2017":["ks_ferrari_sf70h"],
+    "2010":["lotus_exos_125_s1"],
+    "2004":["ks_ferrari_f2004"],
+    "80s":["lotus_98t"],
+    "70s":["ferrari_312t","ks_lotus_72d"],
+    "60s":["ks_ferrari_312_67","lotus_49"]
+    }
+}
 showlaptimes = false
 ```
+to define wich car goes in what class make a class entry like above and add the classnames for the car in there within "" seperated by ,
 
 * alternativly you can build your own docker image with the dockerfile provided or use mine with the following command
 ```
