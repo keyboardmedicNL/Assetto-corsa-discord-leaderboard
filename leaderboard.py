@@ -273,31 +273,36 @@ def hasclasscfg():
             pass
     return(classcfg)
             
-
+# checks if server folder contains assettoserver.exe
+def hasassettoserver():
+    if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
+        return(True)
+    else:
+        return(False)
 # send leaderboard to discord
 def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
-    configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
-    scripttype = str(configp['SCRIPT_...']['SCRIPT'])
-    scripttype = scripttype.replace("'","")
-    if scripttype  in overtakescript:
-        description = "Shmoovin overtake leaderboard"
-    elif scripttype in driftscript:
-        description = "Shmoovin drift leaderboard"
+    try:
+        configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
+        scripttype = str(configp['SCRIPT_...']['SCRIPT'])
+        scripttype = scripttype.replace("'","")
+        if scripttype  in overtakescript:
+            description = "Shmoovin overtake leaderboard"
+        elif scripttype in driftscript:
+            description = "Shmoovin drift leaderboard"
+    except:
+        pass
+    showtimes = True
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
         with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
             if showtimes.lower() == "false":
-                finaltimes = "NA"
-            else:
-                finaltimes = finaltimes
+                showtimes = False
         except:
             pass
-    else:
-        finaltimes = finaltimes
     if onlyleaderboards.lower() == "false":
         configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
         httpport = str(configp['SERVER']['HTTP_PORT'])
@@ -324,7 +329,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             clients = "NA"
             track = "NA"
             print(f"an exception occured for server {file} {e}")
-    if onlyleaderboards.lower() == "false" and hasshmoovin == True:
+    if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
         data = {"embeds": [
                 {
                     "title": name,
@@ -360,7 +365,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                     ]
                 }
             ]}
-    elif onlyleaderboards.lower() == "false" and hasshmoovin == False:
+    elif onlyleaderboards.lower() == "false" and not hasshmoovin and showtimes:
         data = {"embeds": [
                 {
                     "title": name,
@@ -388,11 +393,71 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                         {
                             "name": "Laptimes",
                             "value": finaltimes
-                        },
+                        }
                     ]
                 }
             ]}
-    elif onlyleaderboards.lower() == "true" and hasshmoovin == True:
+    elif onlyleaderboards.lower() == "false" and not hasshmoovin and not showtimes:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": f":race_car:",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
+                        },
+                        {
+                            "name": "Status",
+                            "value": status,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Players",
+                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Track",
+                            "value": track,
+                            "inline": "true" 
+                        }
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "false" and hasshmoovin and not showtimes:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": f":race_car:",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
+                        },
+                        {
+                            "name": "Status",
+                            "value": status,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Players",
+                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
+                            "inline": "true" 
+                        },
+                        {
+                            "name": "Track",
+                            "value": track,
+                            "inline": "true" 
+                        },
+                        {
+                            "name": description,
+                            "value": finalstr
+                        }
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "true" and hasshmoovin and showtimes:
         data = {"embeds": [
                 {
                     "title": name,
@@ -409,7 +474,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                     ]
                 }
             ]}
-    elif onlyleaderboards.lower() == "true" and hasshmoovin == False:
+    elif onlyleaderboards.lower() == "true" and not hasshmoovin and showtimes:
         data = {"embeds": [
                 {
                     "title": name,
@@ -419,6 +484,28 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                             "name": "Laptimes",
                             "value": finaltimes
                         }
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "true" and hasshmoovin and not showtimes:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
+                        {
+                            "name": description,
+                            "value": finalstr
+                        }
+                    ]
+                }
+            ]}
+    elif onlyleaderboards.lower() == "true" and not hasshmoovin and not showtimes:
+        data = {"embeds": [
+                {
+                    "title": name,
+                    "description":"",
+                    "fields": [
                     ]
                 }
             ]}
@@ -464,22 +551,24 @@ while True:
     for file in filenames:
         # checks if folder is actually a server folder
         if folderidentifier in file.lower():
-            hasshmoovin = shmoovincheck()
-            if hasshmoovin == True:
-                scorefind()
-                scores = sortleaderboard()
-                finalstr = formatleaderboard(scores)
-            else:
-                finalstr="NA"
-            timefind()
-            classcfg = hasclasscfg()
-            if classcfg != False:
-                times = sorttimes()
-                timesperclass = sorttimesclass(times,classcfg)
-                finaltimes = formattimesclass(timesperclass,classcfg)
-            else:
-                times = sorttimes()
-                finaltimes = formattimes(times)        
-            sendtowebhook(finalstr,finaltimes,hasshmoovin)
+            hasserver = hasassettoserver()
+            if hasserver:
+                hasshmoovin = shmoovincheck()
+                if hasshmoovin == True:
+                    scorefind()
+                    scores = sortleaderboard()
+                    finalstr = formatleaderboard(scores)
+                else:
+                    finalstr="NA"
+                timefind()
+                classcfg = hasclasscfg()
+                if classcfg != False:
+                    times = sorttimes()
+                    timesperclass = sorttimesclass(times,classcfg)
+                    finaltimes = formattimesclass(timesperclass,classcfg)
+                else:
+                    times = sorttimes()
+                    finaltimes = formattimes(times)        
+                sendtowebhook(finalstr,finaltimes,hasshmoovin)
     print(f"waiting for {interval} minutes")
     time.sleep(interval*60)
