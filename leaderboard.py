@@ -183,9 +183,16 @@ def sorttimesclass(scores,classcfg):
     filteredtimes = []
     for classselected in classcfg:
         filtered = []
-        for cars in classcfg[classselected]:
-            for score in scores:
-                if str(cars) in str(score[0]):
+        for score in scores:
+            carnamesplit = score[0].split("-")
+            if str(carnamesplit[0]) in str(classcfg[classselected]):
+                allreadyin = False
+                for entry in filtered:
+                    if str(score[1]) in str(entry):
+                        allreadyin = True
+                        if str(score[2]) < str(entry[2]):
+                            filtered.append(score)
+                if not allreadyin:
                     filtered.append(score)
         filteredtimes.append(filtered)
     return(filteredtimes)
