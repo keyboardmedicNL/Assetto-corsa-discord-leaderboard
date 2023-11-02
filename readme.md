@@ -52,7 +52,6 @@ in the file add the following lines:
     "60s":["ks_ferrari_312_67","lotus_49"]
     }
 }
-showlaptimes = false
 ```
 to define wich car goes in what class make a class entry like above and add the classnames for the car in there within "" seperated by ,
 
