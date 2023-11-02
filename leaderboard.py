@@ -180,10 +180,8 @@ def sorttimes():
 #sorts times if class configuration is present
 def sorttimesclass(scores,classcfg):
     filteredtimes = []
-    print(classcfg)
     for classselected in classcfg:
         filtered = []
-        print(classselected)
         for cars in classcfg[classselected]:
             for score in scores:
                 if str(cars) in str(score[0]):
@@ -225,7 +223,6 @@ def formattimes(scores):
             minutes= math.floor(laptime/(1000*60)%60)
             laptime = (laptime-(minutes*(1000*60)))
             seconds = (laptime/1000)
-            mili = laptime
             score_format = f"{score[1]} {minutes}:{seconds}"
             finallist.append(f"{scorecounter}. {score_format}\n")
             finalstr = "".join(finallist)
@@ -236,24 +233,29 @@ def formattimes(scores):
 # formats laptimes if class configuration is present
 def formattimesclass(scores,classcfg):
     finallist = []
-    scorecounter = 0
-    scorelength = len(scores)
-    finalstr = "currently empty"
-    if scorelength >= leaderboardlimit:
-        scorelength = leaderboardlimit
-    for score in scores:
-        scorecounter = scorecounter + 1
-        if scorecounter <= scorelength:
-            laptime = float(score[2])
-            minutes= math.floor(laptime/(1000*60)%60)
-            laptime = (laptime-(minutes*(1000*60)))
-            seconds = (laptime/1000)
-            mili = laptime
-            score_format = f"{score[1]} {minutes}:{seconds}"
-            finallist.append(f"{scorecounter}. {score_format}\n")
-            finalstr = "".join(finallist)
-        else:
-            break
+    classlist = []
+    for classname in classcfg:
+        classlist.append(classname)
+    for i,score in enumerate(scores):
+        scorelength = len(score)
+        scorecounter = 0
+        if scorelength > 0:
+            finallist.append(f"{str(classlist[i])}:\n")
+        if scorelength >= leaderboardlimit:
+            scorelength = leaderboardlimit
+        for classcore in scores[i]:
+            scorecounter = scorecounter + 1
+            if scorecounter <= scorelength:
+                laptime = float(classcore[2])
+                minutes= math.floor(laptime/(1000*60)%60)
+                laptime = (laptime-(minutes*(1000*60)))
+                seconds = (laptime/1000)
+                score_format = f"{classcore[1]} {minutes}:{seconds}"
+                finallist.append(f"{scorecounter}. {score_format}\n")
+    finalstr = "".join(finallist)
+    if finalstr == "":
+        finalstr = "currently empty"
+    print(finalstr)
     return(finalstr)
 
 # checks if class config is present and returns it
@@ -471,7 +473,7 @@ while True:
             if classcfg != False:
                 times = sorttimes()
                 timesperclass = sorttimesclass(times,classcfg)
-                #finaltimes = formattimesclass(timesperclass,classcfg)
+                finaltimes = formattimesclass(timesperclass,classcfg)
             else:
                 times = sorttimes()
                 finaltimes = formattimes(times)        
