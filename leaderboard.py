@@ -46,6 +46,7 @@ def scorefind():
             x = re.search(".* \[INF\] CHAT:.* just scored a.*", logline)
             xx = re.search(".* \[INF\] CHAT:.* Drift.", logline)
             if str(xx) != "None":
+                # formats logline to variables to use for leaderboard entry
                 hasscore = True 
                 print(f"found score on: {logline.strip()} for server {file}")
                 x = logline.split(" Drift:")
@@ -54,7 +55,8 @@ def scorefind():
                 x[0] = nameNoID[0]
                 name = x[0]
                 score = float(x[1])
-            elif str(x) != "None":  
+            elif str(x) != "None": 
+                # formats logline to variables to use for leaderboard entry 
                 hasscore = True 
                 print(f"found score on: {logline.strip()} for server {file}")
                 x = logline.split("): just scored a ")
@@ -62,6 +64,7 @@ def scorefind():
                 x[0] = nameArray[1].split(" (")[0]
                 name = x[0]
                 score = float(x[1])
+            # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
             if hasscore: 
                 with open(f"{serverspath}\\{file}\\leaderboard.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
@@ -92,6 +95,7 @@ def scorefind():
                     leaderboard.truncate()
                     leaderboard.write(leaderboardwrite)
 
+# reads log and extracts laptimes
 def timefind():
     if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
         with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
@@ -110,6 +114,7 @@ def timefind():
             score = ""
             x = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
             if str(x) != "None":
+                # formats logline to variables to use for laptime entry
                 hasscore = True 
                 print(f"found laptime on: {logline.strip()} for server {file}")
                 x = logline.split(" cuts, laptime ")
@@ -118,6 +123,7 @@ def timefind():
                 x[0] = nameArray[1].split(",")[0]
                 name = x[0]
                 score = float(x[1])
+                # loops in reverse to find car driven by whoever got the laptime, then formats the entry
                 for ic,carline in enumerate(reversed(loglines)):
                     if ic > len(loglines)-il and ic < len(loglines):
                         xxx = re.search(".* \[INF\] .* has connected", carline)
@@ -128,15 +134,18 @@ def timefind():
                             car = carArray[0]
                             print(f"car is {car}")
                             break
+                # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
                 with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
                     wasfound = False
                     leaderboardlines = leaderboard.readlines()
                     for leaderboardline in leaderboardlines:
+                        # extra logic to avoid issues when manually editing laptimes.txt
                         if str(leaderboardline) == "\n":
                             leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                         if "\n" not in str(leaderboardline):
                             leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
+                        # actual logic to save laptime to laptimes.txt
                         if name in leaderboardline and car in leaderboardline:
                                 wasfound = True
                                 leaderboardlineArray = leaderboardline.split(',')
@@ -156,7 +165,7 @@ def timefind():
                     leaderboard.truncate()
                     leaderboard.write(leaderboardwrite)
 
-# sorts leaderboard in a list
+# sorts leaderboard in list per entry within 1 master list, highest score on top
 def sortleaderboard():
     scores = []
     with open(f"{serverspath}\\{file}\\leaderboard.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
@@ -167,7 +176,7 @@ def sortleaderboard():
     scores.sort(key=lambda s: float(s[1]), reverse = True)
     return(scores)
 
-# sort laptimes in a list
+# sort laptimes in list per entry within 1 master list, fastest lap on top
 def sorttimes():
     scores = []
     with open(f"{serverspath}\\{file}\\laptimes.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
@@ -178,13 +187,14 @@ def sorttimes():
     scores.sort(key=lambda s: float(s[2]), reverse = False)
     return(scores)
 
-#sorts times if class configuration is present
+#sorts times if class configuration is present, outputs lists per class within 1 master list
 def sorttimesclass(scores,classcfg):
     filteredtimes = []
     for classselected in classcfg:
         filtered = []
         for score in scores:
             carnamesplit = score[0].split("-")
+            # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over
             if str(carnamesplit[0]) in str(classcfg[classselected]):
                 allreadyin = False
                 for entry in filtered:
@@ -232,6 +242,7 @@ def formattimes(scores):
             if str(name) in str(entry):
                 allreadyin = True
         if scorecounter <= scorelength and allreadyin != True:
+            # math to convert from ms to minutes:seconds.miliseconds
             laptime = float(score[2])
             minutes= math.floor(laptime/(1000*60)%60)
             laptime = (laptime-(minutes*(1000*60)))
@@ -241,7 +252,7 @@ def formattimes(scores):
             finalstr = "".join(finallist)
     return(finalstr)
 
-# formats laptimes if class configuration is present
+# formats laptimes if class configuration is present to str for use in webhook
 def formattimesclass(scores,classcfg):
     finallist = []
     classlist = []
@@ -281,16 +292,17 @@ def hasclasscfg():
             pass
     return(classcfg)
             
-# checks if server folder contains assettoserver.exe
+# checks if server folder contains assettoserver.exe used to filter results
 def hasassettoserver():
     if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
         return(True)
     else:
         return(False)
-# send leaderboard to discord
+# formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
+    # gets shmoovin script type from config
     try:
         configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
         scripttype = str(configp['SCRIPT_...']['SCRIPT'])
@@ -301,6 +313,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             description = "Shmoovin drift leaderboard"
     except:
         pass
+    # checks if laptimes should be shown
     showtimes = True
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
         with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
@@ -311,6 +324,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 showtimes = False
         except:
             pass
+    # checks if full server status should be shown and formats data for it
     if onlyleaderboards.lower() == "false":
         configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
         httpport = str(configp['SERVER']['HTTP_PORT'])
@@ -337,6 +351,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             clients = "NA"
             track = "NA"
             print(f"an exception occured for server {file} {e}")
+    # returns correct format based on selected parameters
     if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
         data = {"embeds": [
                 {
@@ -540,7 +555,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
 with open("config/config.json") as config:
     configJson = json.load(config)
     interval = configJson["interval"]
-    serverspath = configJson["serverspath"]
+    serverspathlst = configJson["serverspath"]
     webhookurl = configJson["webhookurl"]
     folderidentifier = configJson["folderindentifier"]
     leaderboardlimit = configJson["leaderboardlimit"]
@@ -553,30 +568,35 @@ with open("config/config.json") as config:
 
 # main loop
 while True:
-    filenames= os.listdir(serverspath)
-    print(f"list of folders to check: {filenames}")
     # loop trough folders in server folder
-    for file in filenames:
-        # checks if folder is actually a server folder
-        if folderidentifier in file.lower():
-            hasserver = hasassettoserver()
-            if hasserver:
-                hasshmoovin = shmoovincheck()
-                if hasshmoovin == True:
-                    scorefind()
-                    scores = sortleaderboard()
-                    finalstr = formatleaderboard(scores)
-                else:
-                    finalstr="NA"
-                timefind()
-                classcfg = hasclasscfg()
-                if classcfg != False:
-                    times = sorttimes()
-                    timesperclass = sorttimesclass(times,classcfg)
-                    finaltimes = formattimesclass(timesperclass,classcfg)
-                else:
-                    times = sorttimes()
-                    finaltimes = formattimes(times)        
-                sendtowebhook(finalstr,finaltimes,hasshmoovin)
+    for serverspath in serverspathlst:
+        filenames= os.listdir(str(serverspath))
+        print(f"list of folders to check: {filenames}")
+        for file in filenames:
+            # checks if folder is actually a server folder
+            if folderidentifier in file.lower():
+                hasserver = hasassettoserver()
+                if hasserver:
+                    # checks if shmoovin script exsists
+                    hasshmoovin = shmoovincheck()
+                    if hasshmoovin == True:
+                        scorefind()
+                        scores = sortleaderboard()
+                        finalstr = formatleaderboard(scores)
+                    else:
+                        finalstr="NA"
+                    # gets laptimes and checks if classcfg exsists
+                    timefind()
+                    classcfg = hasclasscfg()
+                    # logic if classcfg does exsist
+                    if classcfg != False:
+                        times = sorttimes()
+                        timesperclass = sorttimesclass(times,classcfg)
+                        finaltimes = formattimesclass(timesperclass,classcfg)
+                    # logic if classcfg does not exsist
+                    else:
+                        times = sorttimes()
+                        finaltimes = formattimes(times)        
+                    sendtowebhook(finalstr,finaltimes,hasshmoovin)
     print(f"waiting for {interval} minutes")
     time.sleep(interval*60)
