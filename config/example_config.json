@@ -1,0 +1,12 @@
+{
+    "interval": 1,
+    "serverspath": ["ACSERVERS(0.53)"],
+    "folderindentifier": "(server",
+    "leaderboardlimit": 10,
+    "webhookurl":"https://localhost",
+    "shmoovindrifturl":["https://localhost"],
+    "shmoovinovertakeurl":["https://localhost","https://localhost"],
+    "serveradress":"127.0.0.1",
+    "serveradressdisplay":"127.0.0.1",
+    "onlyleaderboards":"false"
+}

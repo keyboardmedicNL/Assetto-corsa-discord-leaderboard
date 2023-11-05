@@ -1,9 +1,6 @@
-config
-Config
 .git
 .gitignore
 start.bat
-/config
-/servers
-/ACSERVERS(0.52)
 /ignore
+/config/config.json
+/config/messages

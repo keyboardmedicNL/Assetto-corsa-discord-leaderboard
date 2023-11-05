@@ -1,4 +1,5 @@
-/config
+/config/config.json
+/config/messages
 /servers
 /ACSERVERS(0.52)
 /ignore

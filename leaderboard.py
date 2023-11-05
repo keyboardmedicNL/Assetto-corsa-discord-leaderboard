@@ -8,11 +8,15 @@ import re
 import configparser
 import math
 
-# variables
+##### variables #####
 logPath = "\\logs\\"
 configp = configparser.ConfigParser(strict=False)
 
-# functions
+##### functions #####
+
+
+### file checks ###
+
 # checks if shmoovin is present in config
 def shmoovincheck():
     hasshmoovin = False
@@ -26,7 +30,32 @@ def shmoovincheck():
                         print(f"shmoovin script was found in server {file}")
     return(hasshmoovin)
 
-# reads log and extracts scores
+# checks if class config is present and returns it
+def hasclasscfg():
+    classcfg = False
+    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
+        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
+            configJson = json.load(config)
+        try:
+            classcfg = configJson["classes"]
+        except:
+            pass
+    return(classcfg)
+
+# checks if server folder contains assettoserver.exe used to filter results
+def hasassettoserver():
+    if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
+        return("assettoserver")
+    elif exists(f"{serverspath}\\{file}\\\\acServer.exe"):
+        return("acserver")
+    else:
+        return("none")
+
+
+
+### score and time find ###
+
+# reads log and extracts shmoovin scores for assettoserver
 def scorefind():
     if not exists(f"{serverspath}\\{file}\\leaderboard.txt"):
         with open(f"{serverspath}\\{file}\\leaderboard.txt", 'w') as leaderboard:
@@ -89,13 +118,12 @@ def scorefind():
                         leaderboardlinesnew.append(entry)
                         print(f"new record for {name} with score {score} on server {file}")
                     leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                    print(f"list to write: {leaderboardlinescomb}")
                     leaderboardwrite = ''.join(leaderboardlinescomb)
                     leaderboard.seek(0)
                     leaderboard.truncate()
                     leaderboard.write(leaderboardwrite)
 
-# reads log and extracts laptimes
+# reads log and extracts laptimes for assettoserver
 def timefind():
     if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
         with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
@@ -132,7 +160,6 @@ def timefind():
                             x = carline.split(" (")
                             carArray = x[2].split(")) has connected")
                             car = carArray[0]
-                            print(f"car is {car}")
                             break
                 # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
                 with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
@@ -165,6 +192,58 @@ def timefind():
                     leaderboard.truncate()
                     leaderboard.write(leaderboardwrite)
 
+# find laptimes for acServer sessions
+def findtimevanilla():
+    if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
+        with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
+            leaderboard.write("")
+            print(f"laptimes was not found so it was created for server {file}")
+    pathToResults = f"{serverspath}\\{file}\\results\\*"
+    list_of_files = glob.glob(pathToResults)
+    latest_file = max(list_of_files, key=os.path.getctime)
+    print(f"results file that is being read is: {latest_file} for server {file}")
+    with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
+        resultsJson = json.load(f)
+    for result in resultsJson["Result"]:
+        name = result["DriverName"]
+        car = result["CarModel"]
+        score = result["BestLap"]
+        if name != "" and score != 999999999:
+             with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                    leaderboardlinesnew = []
+                    wasfound = False
+                    leaderboardlines = leaderboard.readlines()
+                    for leaderboardline in leaderboardlines:
+                        # extra logic to avoid issues when manually editing laptimes.txt
+                        if str(leaderboardline) == "\n":
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                        if "\n" not in str(leaderboardline):
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
+                        # actual logic to save laptime to laptimes.txt
+                        if name in leaderboardline and car in leaderboardline:
+                                wasfound = True
+                                leaderboardlineArray = leaderboardline.split(',')
+                                oldscore = leaderboardlineArray[2]
+                                if score < float(oldscore):
+                                    entry = f"{car},{name},{score}\n"
+                                    leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                                    leaderboardlinesnew.append(entry)
+                                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                    if wasfound == False:
+                        entry = f"{car},{name},{score}\n"
+                        leaderboardlinesnew.append(entry)
+                        print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                    leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
+                    leaderboardwrite = ''.join(leaderboardlinescomb)
+                    leaderboard.seek(0)
+                    leaderboard.truncate()
+                    leaderboard.write(leaderboardwrite)
+
+
+
+
+### sorting and formatting ####
+
 # sorts leaderboard in list per entry within 1 master list, highest score on top
 def sortleaderboard():
     scores = []
@@ -174,6 +253,7 @@ def sortleaderboard():
             score = score.strip()
             scores.append([name, score])
     scores.sort(key=lambda s: float(s[1]), reverse = True)
+    print(f"sorted leaderboardfile for server {file}")
     return(scores)
 
 # sort laptimes in list per entry within 1 master list, fastest lap on top
@@ -185,6 +265,7 @@ def sorttimes():
             score = score.strip()
             scores.append([car, name, score])
     scores.sort(key=lambda s: float(s[2]), reverse = False)
+    print(f"sorted laptimes for server {file}")
     return(scores)
 
 #sorts times if class configuration is present, outputs lists per class within 1 master list
@@ -205,6 +286,7 @@ def sorttimesclass(scores,classcfg):
                 if not allreadyin:
                     filtered.append(score)
         filteredtimes.append(filtered)
+    print(f"sorted laptimes for server with multiclass {file}")
     return(filteredtimes)
 
 # formats scores to str to use in webhook
@@ -224,6 +306,7 @@ def formatleaderboard(scores):
             finalstr = "".join(finallist)
         else:
             break
+    print(f"formatted leaderboard for server {file}")
     return(finalstr)
 
 #formats laptimes to str to use in webhook
@@ -250,6 +333,7 @@ def formattimes(scores):
             score_format = f"{score[1]} {minutes}:{seconds}"
             finallist.append(f"{scorecounter}. {score_format}\n")
             finalstr = "".join(finallist)
+    print(f"formatted laptimes for server {file}")
     return(finalstr)
 
 # formats laptimes if class configuration is present to str for use in webhook
@@ -277,27 +361,9 @@ def formattimesclass(scores,classcfg):
     finalstr = "".join(finallist)
     if finalstr == "":
         finalstr = "currently empty"
-    print(finalstr)
+    print(f"formatted leaderboard for server with multiclass {file}")
     return(finalstr)
-
-# checks if class config is present and returns it
-def hasclasscfg():
-    classcfg = False
-    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
-        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
-            configJson = json.load(config)
-        try:
-            classcfg = configJson["classes"]
-        except:
-            pass
-    return(classcfg)
-            
-# checks if server folder contains assettoserver.exe used to filter results
-def hasassettoserver():
-    if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
-        return(True)
-    else:
-        return(False)
+           
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
@@ -353,6 +419,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             print(f"an exception occured for server {file} {e}")
     # returns correct format based on selected parameters
     if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
+        print(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -389,6 +456,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and showtimes:
+        print(f"posting/updating message with full server info and laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -421,6 +489,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and not showtimes:
+        print(f"posting/updating message with full server info for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -449,6 +518,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and hasshmoovin and not showtimes:
+        print(f"posting/updating message with full server info and shmoovin for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -481,6 +551,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and hasshmoovin and showtimes:
+        print(f"posting/updating message with shmoovin and laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -498,6 +569,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and not hasshmoovin and showtimes:
+        print(f"posting/updating message with laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -511,6 +583,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and hasshmoovin and not showtimes:
+        print(f"posting/updating message with shmoovin for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -523,33 +596,52 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                     ]
                 }
             ]}
-    elif onlyleaderboards.lower() == "true" and not hasshmoovin and not showtimes:
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "fields": [
-                    ]
-                }
-            ]}
     # checks if leaderboard message was allready created and updates it
-    if exists(f"config/{file}.txt"):
-        with open(f"config/{file}.txt") as File:
+    if exists(f"config/messages/{messagecounter}.txt"):
+        with open(f"config/messages/{messagecounter}.txt") as File:
             messageid = str(File.readline())
-        print(f"{messageid} read from {file}.txt")
+        print(f"{messageid} read from {messagecounter}.txt")
         rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
-        print(f"discord webhook response for method patch is {rl} ({messageid} updated)")
+        if "200" in str(rl):
+            print(f"discord message {messageid} updated")
+        else:
+            print(f"discord message {messageid} could not be updated")
+
     # creates leaderboard message if not allready created
     else:
         rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
         rljson = rl.json()
         messageid = rljson["id"]
         print(f"discord webhook response for method post is {rl} ({messageid} posted)")
-        with open(f"config/{file}.txt", 'w') as File:
-            File.write(messageid)
-            print(f"{messageid} saved in file {file}.txt")
-    time.sleep(2)
+        if "200" in str(rl):
+            print(f"discord message {messageid} posted")
+        else:
+            print(f"discord message {messageid} could not be posted")
+        if not exists("config/messages"):
+            os.mkdir("config/messages")
+        with open(f"config/messages/{messagecounter}.txt", 'w') as File:
+            File.write(f"{messageid}")
+            print(f"{messageid} saved in file {messagecounter}.txt")
+    time.sleep(1)
 
+# deletes unused discord messages
+def deletemessage():
+    messagelst= os.listdir("config/messages")
+    for index,message in enumerate(messagelst):
+        if index > messagecounter:
+            with open(f"config/messages/{message}") as File:
+                messageid = str(File.readline())
+            rl = requests.delete(f"{webhookurl}/messages/{messageid}",params={'wait': 'true'})
+            if "204" in str(rl):
+                print(f"discord message {messageid} is unused and is now deleted")
+            else:
+                print(f"discord message {messageid} could not be deleted")
+            os.remove(f"config/messages/{message}")
+            print(f"removing unused message file {message}")
+
+
+
+##### main code ####
 
 # load config
 with open("config/config.json") as config:
@@ -565,18 +657,22 @@ with open("config/config.json") as config:
     serveradress = configJson["serveradress"]
     serveradressdisplay = configJson["serveradressdisplay"]
     shmoovinurl = driftscript + overtakescript
+    print("succesfully loaded config")
 
-# main loop
+# main loop 
+print("starting main loop")
 while True:
     # loop trough folders in server folder
+    messagecounter = -1
     for serverspath in serverspathlst:
         filenames= os.listdir(str(serverspath))
         print(f"list of folders to check: {filenames}")
         for file in filenames:
             # checks if folder is actually a server folder
             if folderidentifier in file.lower():
+                messagecounter = messagecounter+1
                 hasserver = hasassettoserver()
-                if hasserver:
+                if hasserver != "none":
                     # checks if shmoovin script exsists
                     hasshmoovin = shmoovincheck()
                     if hasshmoovin == True:
@@ -584,9 +680,12 @@ while True:
                         scores = sortleaderboard()
                         finalstr = formatleaderboard(scores)
                     else:
-                        finalstr="NA"
+                        finalstr = "NA"
                     # gets laptimes and checks if classcfg exsists
-                    timefind()
+                    if hasserver == "assettoserver":
+                        timefind()
+                    elif hasserver == "acserver":
+                        findtimevanilla()
                     classcfg = hasclasscfg()
                     # logic if classcfg does exsist
                     if classcfg != False:
@@ -598,5 +697,6 @@ while True:
                         times = sorttimes()
                         finaltimes = formattimes(times)        
                     sendtowebhook(finalstr,finaltimes,hasshmoovin)
+        deletemessage()
     print(f"waiting for {interval} minutes")
     time.sleep(interval*60)
