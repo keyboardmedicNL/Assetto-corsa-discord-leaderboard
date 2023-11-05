@@ -68,7 +68,7 @@ docker run -dit --name shmoovin-discord-leaderboard -v /path/to/assetto/servers:
 --> (server 2) this is another server  
 ---> logs  
 
-* to remove or resend a leaderboard delete the corresponding txt file with the server name in the config folder and manually delete the leaderboard message on discord.
+* should not be needed but just in case: to remove or resend a leaderboard delete all txt files in the folder ./config/messages and manually delete the leaderboard message on discord .
 
 * to remove an entry from the leaderboards delete the entry in the corresponding file (leaderboard.txt or laptimes.txt in the server root) and delete the corresponding log line in the logs
 

@@ -632,7 +632,7 @@ def deletemessage():
             with open(f"config/messages/{message}") as File:
                 messageid = str(File.readline())
             rl = requests.delete(f"{webhookurl}/messages/{messageid}",params={'wait': 'true'})
-            if "200" in str(rl):
+            if "204" in str(rl):
                 print(f"discord message {messageid} is unused and is now deleted")
             else:
                 print(f"discord message {messageid} could not be deleted")
