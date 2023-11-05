@@ -8,11 +8,15 @@ import re
 import configparser
 import math
 
-# variables
+##### variables #####
 logPath = "\\logs\\"
 configp = configparser.ConfigParser(strict=False)
 
-# functions
+##### functions #####
+
+
+### file checks ###
+
 # checks if shmoovin is present in config
 def shmoovincheck():
     hasshmoovin = False
@@ -26,7 +30,32 @@ def shmoovincheck():
                         print(f"shmoovin script was found in server {file}")
     return(hasshmoovin)
 
-# reads log and extracts scores
+# checks if class config is present and returns it
+def hasclasscfg():
+    classcfg = False
+    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
+        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
+            configJson = json.load(config)
+        try:
+            classcfg = configJson["classes"]
+        except:
+            pass
+    return(classcfg)
+
+# checks if server folder contains assettoserver.exe used to filter results
+def hasassettoserver():
+    if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
+        return("assettoserver")
+    elif exists(f"{serverspath}\\{file}\\\\acServer.exe"):
+        return("acserver")
+    else:
+        return("none")
+
+
+
+### score and time find ###
+
+# reads log and extracts shmoovin scores for assettoserver
 def scorefind():
     if not exists(f"{serverspath}\\{file}\\leaderboard.txt"):
         with open(f"{serverspath}\\{file}\\leaderboard.txt", 'w') as leaderboard:
@@ -95,7 +124,7 @@ def scorefind():
                     leaderboard.truncate()
                     leaderboard.write(leaderboardwrite)
 
-# reads log and extracts laptimes
+# reads log and extracts laptimes for assettoserver
 def timefind():
     if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
         with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
@@ -164,6 +193,58 @@ def timefind():
                     leaderboard.seek(0)
                     leaderboard.truncate()
                     leaderboard.write(leaderboardwrite)
+
+# find laptimes for acServer sessions
+def findtimevanilla():
+    if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
+        with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
+            leaderboard.write("")
+            print(f"laptimes was not found so it was created for server {file}")
+    pathToResults = f"{serverspath}\\{file}\\results\\*"
+    list_of_files = glob.glob(pathToResults)
+    latest_file = max(list_of_files, key=os.path.getctime)
+    print(f"results file that is being read is: {latest_file} for server {file}")
+    with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
+        resultsJson = json.load(f)
+    for result in resultsJson["Result"]:
+        name = result["DriverName"]
+        car = result["CarModel"]
+        score = result["BestLap"]
+        if name != "" and score != 999999999:
+             with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                    leaderboardlinesnew = []
+                    wasfound = False
+                    leaderboardlines = leaderboard.readlines()
+                    for leaderboardline in leaderboardlines:
+                        # extra logic to avoid issues when manually editing laptimes.txt
+                        if str(leaderboardline) == "\n":
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                        if "\n" not in str(leaderboardline):
+                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
+                        # actual logic to save laptime to laptimes.txt
+                        if name in leaderboardline and car in leaderboardline:
+                                wasfound = True
+                                leaderboardlineArray = leaderboardline.split(',')
+                                oldscore = leaderboardlineArray[2]
+                                if score < float(oldscore):
+                                    entry = f"{car},{name},{score}\n"
+                                    leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                                    leaderboardlinesnew.append(entry)
+                                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                    if wasfound == False:
+                        entry = f"{car},{name},{score}\n"
+                        leaderboardlinesnew.append(entry)
+                        print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                    leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
+                    leaderboardwrite = ''.join(leaderboardlinescomb)
+                    leaderboard.seek(0)
+                    leaderboard.truncate()
+                    leaderboard.write(leaderboardwrite)
+
+
+
+
+### sorting and formatting ####
 
 # sorts leaderboard in list per entry within 1 master list, highest score on top
 def sortleaderboard():
@@ -277,27 +358,8 @@ def formattimesclass(scores,classcfg):
     finalstr = "".join(finallist)
     if finalstr == "":
         finalstr = "currently empty"
-    print(finalstr)
     return(finalstr)
-
-# checks if class config is present and returns it
-def hasclasscfg():
-    classcfg = False
-    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
-        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
-            configJson = json.load(config)
-        try:
-            classcfg = configJson["classes"]
-        except:
-            pass
-    return(classcfg)
-            
-# checks if server folder contains assettoserver.exe used to filter results
-def hasassettoserver():
-    if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
-        return(True)
-    else:
-        return(False)
+           
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
@@ -551,6 +613,9 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     time.sleep(2)
 
 
+
+##### main code ####
+
 # load config
 with open("config/config.json") as config:
     configJson = json.load(config)
@@ -566,7 +631,7 @@ with open("config/config.json") as config:
     serveradressdisplay = configJson["serveradressdisplay"]
     shmoovinurl = driftscript + overtakescript
 
-# main loop
+# main loop 
 while True:
     # loop trough folders in server folder
     for serverspath in serverspathlst:
@@ -576,7 +641,7 @@ while True:
             # checks if folder is actually a server folder
             if folderidentifier in file.lower():
                 hasserver = hasassettoserver()
-                if hasserver:
+                if hasserver != "none":
                     # checks if shmoovin script exsists
                     hasshmoovin = shmoovincheck()
                     if hasshmoovin == True:
@@ -584,9 +649,12 @@ while True:
                         scores = sortleaderboard()
                         finalstr = formatleaderboard(scores)
                     else:
-                        finalstr="NA"
+                        finalstr = "NA"
                     # gets laptimes and checks if classcfg exsists
-                    timefind()
+                    if hasserver == "assettoserver":
+                        timefind()
+                    elif hasserver == "acserver":
+                        findtimevanilla()
                     classcfg = hasclasscfg()
                     # logic if classcfg does exsist
                     if classcfg != False:
