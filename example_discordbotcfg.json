@@ -1,0 +1,11 @@
+{
+    "showlaptimes":"True",
+    "classes":{
+        "2017":["ks_ferrari_sf70h"],
+        "2010":["lotus_exos_125_s1"],
+        "2004":["ks_ferrari_f2004"],
+        "80s":["lotus_98t"],
+        "70s":["ferrari_312t","ks_lotus_72d"],
+        "60s":["ks_ferrari_312_67","lotus_49"]
+        }
+    }
