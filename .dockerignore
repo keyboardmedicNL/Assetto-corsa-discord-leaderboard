@@ -3,3 +3,4 @@ Config
 .git
 .gitignore
 start.bat
+/ignore
