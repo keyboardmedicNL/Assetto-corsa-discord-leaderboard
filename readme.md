@@ -25,7 +25,7 @@ python -m pip install requests
 ```
 {
     "interval": time in minutes on how often the script should update the leaderboards,
-    "serverspath": "path/to/server_parent_folder (if using docker make this "servers")",
+    "serverspath": ["path/to/server_parent_folder1", "path/to/server_parent_folder2"],
     "folderindentifier": "identifier to recognize server folder",
     "leaderboardlimit": how much entries should be displayed on the leaderboard,
     "webhookurl":"url to your discord webhook",
