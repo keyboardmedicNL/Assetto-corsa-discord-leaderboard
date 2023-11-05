@@ -1,11 +1,13 @@
 # what does it do:
-a server sided script that reads logs from assettoserver for lap times, shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks.
+a server sided script that reads logs from assettoserver and acServer for lap times, shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks.
 
 ![alt text](screenshot3.png)
 
 ![alt text](screenshot4.png)
 
 ![alt text](screenshot5.png)
+
+it makes as many messages as there are servers and will delete them if the server no longer exsists.
 
 it loops trough a parent folder housing all servers and uses a configurable identifier to identify server folders. if it sees a server folder it looks in that folder for a logs folder where it will then loop trough the last log file to find score entries. it will NOT work with different folder structures (example below). it saves the scores and laptimes to a leaderboard txt and a laptimes txt in the root of the server wich can be added manually to remove or reset scores.
 
