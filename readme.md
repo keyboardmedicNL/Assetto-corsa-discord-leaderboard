@@ -54,8 +54,8 @@ docker run -dit --name shmoovin-discord-leaderboard -v /path/to/assetto/servers:
 ---> logs  
 --> (server 2) this is another server  
 ---> logs
--> acServers
---> (server 3) this is yet another server
+-> acServers   
+--> (server 3) this is yet another server  
 ---> results  
 
 # extra configuration options
