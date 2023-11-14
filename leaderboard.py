@@ -63,7 +63,8 @@ def scorefind():
             print(f"leaderboard was not found so it was created for server {file}")
     pathToLogs = f"{serverspath}\\{file}{logPath}*"
     list_of_files = glob.glob(pathToLogs)
-    latest_file = max(list_of_files, key=os.path.getctime)
+    sorted_files = sorted(list_of_files, key=os.path.getctime)
+    latest_file = str(sorted_files[-1])
     print(f"Log file that is being read is: {latest_file} for server {file}")
     # opens and loops trough last logfile to find score entries and writes them to leaderboard.txt
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
@@ -131,66 +132,80 @@ def timefind():
             print(f"laptimes was not found so it was created for server {file}")
     pathToLogs = f"{serverspath}\\{file}{logPath}*"
     list_of_files = glob.glob(pathToLogs)
-    latest_file = max(list_of_files, key=os.path.getctime)
+    sorted_files = sorted(list_of_files, key=os.path.getctime)
+    latest_file = str(sorted_files[-1])
     print(f"Log file that is being read is: {latest_file} for server {file}")
     # opens and loops trough last logfile to find score entries and writes them to laptimes.txt
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
         loglines = f.readlines()
-        for il,logline in enumerate(loglines):
-            hasscore = False
-            name = ""
-            score = ""
-            x = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
-            if str(x) != "None":
-                # formats logline to variables to use for laptime entry
-                hasscore = True 
-                print(f"found laptime on: {logline.strip()} for server {file}")
-                x = logline.split(" cuts, laptime ")
-                print(x)
-                nameArray = x[0].split("Lap completed by ")
-                x[0] = nameArray[1].split(",")[0]
-                name = x[0]
-                score = float(x[1])
-                # loops in reverse to find car driven by whoever got the laptime, then formats the entry
-                for ic,carline in enumerate(reversed(loglines)):
-                    if ic > len(loglines)-il and ic < len(loglines):
-                        xxx = re.search(".* \[INF\] .* has connected", carline)
-                        if str(xxx) != "None" and str(name) in carline:
-                            print(f"found car on: {carline.strip()} for server {file}")
-                            x = carline.split(" (")
-                            carArray = x[2].split(")) has connected")
-                            car = carArray[0]
-                            break
+    for il,logline in enumerate(loglines):
+        hasscore = False
+        name = ""
+        score = ""
+        x = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
+        if str(x) != "None":
+            # formats logline to variables to use for laptime entry
+            hasscore = True 
+            print(f"found laptime on: {logline.strip()} for server {file}")
+            x = logline.split(" cuts, laptime ")
+            print(x)
+            nameArray = x[0].split("Lap completed by ")
+            x[0] = nameArray[1].split(",")[0]
+            name = x[0]
+            score = float(x[1])
+            # loops in reverse to find car driven by whoever got the laptime, then formats the entry
+            car = ""
+            for ic,carline in enumerate(reversed(loglines)):
+                if ic > len(loglines)-il and ic < len(loglines):
+                    xxx = re.search(".* \[INF\] .* has connected", carline)
+                    if str(xxx) != "None" and str(name) in carline:
+                        print(f"found car on: {carline.strip()} for server {file}")
+                        x = carline.split(" (")
+                        carArray = x[2].split(")) has connected")
+                        car = carArray[0]
+                        break
+            if not car:
+                print(f"could not find car entry in current log for {str(name)}, trying in second latest log file")
+                with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
+                    loglines = f.readlines()
+                for carline in reversed(loglines):
+                    xxx = re.search(".* \[INF\] .* has connected", carline)
+                    if str(xxx) != "None" and str(name) in carline:
+                        print(f"found car on: {carline.strip()} for server {file}")
+                        x = carline.split(" (")
+                        carArray = x[2].split(")) has connected")
+                        car = carArray[0]
+                        break
                 # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
-                with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
-                    leaderboardlinesnew = []
-                    wasfound = False
-                    leaderboardlines = leaderboard.readlines()
-                    for leaderboardline in leaderboardlines:
-                        # extra logic to avoid issues when manually editing laptimes.txt
-                        if str(leaderboardline) == "\n":
-                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                        if "\n" not in str(leaderboardline):
-                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
-                        # actual logic to save laptime to laptimes.txt
-                        if name in leaderboardline and car in leaderboardline:
-                                wasfound = True
-                                leaderboardlineArray = leaderboardline.split(',')
-                                oldscore = leaderboardlineArray[2]
-                                if score < float(oldscore):
-                                    entry = f"{car},{name},{score}\n"
-                                    leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                                    leaderboardlinesnew.append(entry)
-                                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
-                    if wasfound == False:
-                        entry = f"{car},{name},{score}\n"
-                        leaderboardlinesnew.append(entry)
-                        print(f"new laptime for {name} in {car} with time {score} for server {file}")
-                    leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                    leaderboardwrite = ''.join(leaderboardlinescomb)
-                    leaderboard.seek(0)
-                    leaderboard.truncate()
-                    leaderboard.write(leaderboardwrite)
+            with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                leaderboardlinesnew = []
+                wasfound = False
+                leaderboardlines = leaderboard.readlines()
+                for leaderboardline in leaderboardlines:
+                    # extra logic to avoid issues when manually editing laptimes.txt
+                    if str(leaderboardline) == "\n":
+                        leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                    if "\n" not in str(leaderboardline):
+                        leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
+                    # actual logic to save laptime to laptimes.txt
+                    if name in leaderboardline and car in leaderboardline:
+                            wasfound = True
+                            leaderboardlineArray = leaderboardline.split(',')
+                            oldscore = leaderboardlineArray[2]
+                            if score < float(oldscore):
+                                entry = f"{car},{name},{score}\n"
+                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                                leaderboardlinesnew.append(entry)
+                                print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                if wasfound == False:
+                    entry = f"{car},{name},{score}\n"
+                    leaderboardlinesnew.append(entry)
+                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
+                leaderboardwrite = ''.join(leaderboardlinescomb)
+                leaderboard.seek(0)
+                leaderboard.truncate()
+                leaderboard.write(leaderboardwrite)
 
 # find laptimes for acServer sessions
 def findtimevanilla():
