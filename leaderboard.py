@@ -7,6 +7,8 @@ from os.path import exists
 import re
 import configparser
 import math
+import threading
+from subprocess import call
 
 ##### variables #####
 logPath = "\\logs\\"
@@ -154,7 +156,7 @@ def timefind():
             name = x[0]
             score = float(x[1])
             # loops in reverse to find car driven by whoever got the laptime, then formats the entry
-            car = ""
+            car = "none"
             for ic,carline in enumerate(reversed(loglines)):
                 if ic > len(loglines)-il and ic < len(loglines):
                     xxx = re.search(".* \[INF\] .* has connected", carline)
@@ -164,13 +166,13 @@ def timefind():
                         carArray = x[2].split(")) has connected")
                         car = carArray[0]
                         break
-            if not car:
-                print(f"could not find car entry in current log for {str(name)}, trying in second latest log file")
+            if car == "none":
+                print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
                 with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
-                    loglines = f.readlines()
-                for carline in reversed(loglines):
-                    xxx = re.search(".* \[INF\] .* has connected", carline)
-                    if str(xxx) != "None" and str(name) in carline:
+                    loglines_second_last = f.readlines()
+                for carline in reversed(loglines_second_last):
+                    xxxx = re.search(".* \[INF\] .* has connected", carline)
+                    if str(xxxx) != "None" and str(name) in carline:
                         print(f"found car on: {carline.strip()} for server {file}")
                         x = carline.split(" (")
                         carArray = x[2].split(")) has connected")
@@ -305,11 +307,13 @@ def sorttimesclass(scores,classcfg):
     return(filteredtimes)
 
 # formats scores to str to use in webhook
-def formatleaderboard(scores):
+def formatleaderboard(scores,doc_type):
     finallist = []
+    finallist_html = []
     scorecounter = 0
     scorelength = len(scores)
     finalstr = "currently empty"
+    finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
     if scorelength >= leaderboardlimit:
         scorelength = leaderboardlimit
     for score in scores:
@@ -317,51 +321,77 @@ def formatleaderboard(scores):
         if scorecounter <= scorelength:
             score_format = ' '.join(score)
             score_format = score_format.strip()
-            finallist.append(f"{scorecounter}. {score_format}\n")
+            if doc_type == "discord":
+                finallist.append(f"{scorecounter}. {score_format}\n")
+            if doc_type == "html":
+                finallist.append(f"{scorecounter}. {score_format}\n")
+                short_name = str(score[0])[0:8]
+                html_score_format = f"<b>{short_name}</b> {str(score[1])}"
+                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
             finalstr = "".join(finallist)
+            finalstr_html = "".join(finallist_html)
         else:
             break
     print(f"formatted leaderboard for server {file}")
-    return(finalstr)
+    if doc_type == "discord":
+        return(finalstr)
+    elif doc_type == "html":
+        return(finalstr_html)
 
 #formats laptimes to str to use in webhook
-def formattimes(scores):
+def formattimes(scores,doc_type):
     finallist = []
+    finallist_html = []
     scorecounter = 0
     scorelength = len(scores)
     finalstr = "currently empty"
+    finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
     if scorelength >= leaderboardlimit:
         scorelength = leaderboardlimit
     for score in scores:
         allreadyin = False
-        name = score[1]
-        scorecounter = scorecounter + 1
+        name = score[1]  
         for entry in finallist:
             if str(name) in str(entry):
                 allreadyin = True
-        if scorecounter <= scorelength and allreadyin != True:
+        if scorecounter <= scorelength-1 and allreadyin != True:
+            scorecounter = scorecounter + 1
             # math to convert from ms to minutes:seconds.miliseconds
             laptime = float(score[2])
             minutes= math.floor(laptime/(1000*60)%60)
             laptime = (laptime-(minutes*(1000*60)))
             seconds = (laptime/1000)
             score_format = f"{score[1]} {minutes}:{seconds}"
-            finallist.append(f"{scorecounter}. {score_format}\n")
+            if doc_type == "discord":
+                finallist.append(f"{scorecounter}. {score_format}\n")
+            elif doc_type == "html":
+                finallist.append(f"{scorecounter}. {score_format}\n")
+                short_name = str(score[1])[0:8]
+                html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
+                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
             finalstr = "".join(finallist)
+            finalstr_html = "".join(finallist_html)
     print(f"formatted laptimes for server {file}")
-    return(finalstr)
+    if doc_type == "discord":
+        return(finalstr)
+    elif doc_type == "html":
+        return(finalstr_html)
 
 # formats laptimes if class configuration is present to str for use in webhook
-def formattimesclass(scores,classcfg):
+def formattimesclass(scores,classcfg,doc_type):
     finallist = []
     classlist = []
+    finallist_html = []
     for classname in classcfg:
         classlist.append(classname)
     for i,score in enumerate(scores):
         scorelength = len(score)
         scorecounter = 0
         if scorelength > 0:
-            finallist.append(f"\n***class: {str(classlist[i])}***:\n")
+            if doc_type == "discord":
+                finallist.append(f"\n***class: {str(classlist[i])}***:\n")
+            elif doc_type == "html":
+                finallist_html.append(f"\n<div class=\"classbox\">\n<h3>class: {str(classlist[i])}</h3>\n</div>\n")
         if scorelength >= leaderboardlimit:
             scorelength = leaderboardlimit
         for classcore in scores[i]:
@@ -372,13 +402,117 @@ def formattimesclass(scores,classcfg):
                 laptime = (laptime-(minutes*(1000*60)))
                 seconds = (laptime/1000)
                 score_format = f"{classcore[1]} {minutes}:{seconds}"
-                finallist.append(f"{scorecounter}. {score_format}\n")
+                if doc_type == "discord":
+                    finallist.append(f"{scorecounter}. {score_format}\n")
+                if doc_type == "html":
+                    finallist.append(f"{scorecounter}. {score_format}\n")
+                    short_name = str(classcore[1])[0:8]
+                    html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
+                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
     finalstr = "".join(finallist)
+    finalstr_html = "".join(finallist_html)
     if finalstr == "":
         finalstr = "currently empty"
+        finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
     print(f"formatted leaderboard for server with multiclass {file}")
-    return(finalstr)
+    if doc_type == "discord":
+        return(finalstr)
+    elif doc_type == "html":
+        return(finalstr_html)
            
+# formats and sends to html files for webserver
+def sendtohtml(finalstr,finaltimes,hasshmoovin):
+    configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
+    name = str(configp['SERVER']['NAME'])
+    try:
+        configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
+        scripttype = str(configp['SCRIPT_...']['SCRIPT'])
+        scripttype = scripttype.replace("'","")
+        if scripttype  in overtakescript:
+            description = "Shmoovin overtake leaderboard"
+        elif scripttype in driftscript:
+            description = "Shmoovin drift leaderboard"
+    except:
+        pass
+    showtimes = True
+    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
+        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
+            configJson = json.load(config)
+        try:
+            showtimes = configJson["showlaptimes"]
+            if showtimes.lower() == "false":
+                showtimes = False
+        except:
+            pass
+    if not exists(f"html"):
+        os.mkdir("html")
+    pre_html = ("""<html>
+                        <head>
+                        <style>
+                        body {
+                            font-family: verdana; 
+                            }
+                        .namebox {
+                            width: 320px;
+                            line-height:1%;
+                            padding: 1px;
+                            margin: 2px;
+                            background-color: #000000;
+                            color: white;
+                            border-left-style: solid;
+                            border-color: orange;
+                            }
+                        .classbox {
+                            width: 320px;
+                            line-height:100%;
+                            padding: 1px;
+                            margin: 2px;
+                            background-color: orange;
+                            color: white;
+                            border-left-style: solid;
+                            border-color: orange;
+                            }
+                        .titlebox {
+                            width: 320px;
+                            line-height:200%;
+                            padding: 1px;
+                            margin: 2px;
+                            background-color: black;
+                            color: white;
+                            border-left-style: solid;
+                            border-color: orange;
+                            word-wrap: break-word;
+                            }
+                        </style>
+                        </head>
+                        <body>
+                        <div class="titlebox">""")
+    refresh_script = "<script>setTimeout(function(){location.reload()},10000);</script>"
+    if showtimes:
+        times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
+        if exists (f"html/{file}-times.html"):
+            with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
+                html_lap_times.seek(0)
+                html_lap_times.truncate()
+                html_lap_times.write(times_html)
+                print(f"wrote laptimes to {file}-times.html for server {file}")
+        else:
+            with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
+                html_lap_times.write(times_html)
+                print(f"{file}-times.html was created with laptimes for server {file}")
+    if hasshmoovin:
+        shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{description}</h3>\n</div>\n{finalstr}\n{refresh_script}"
+        if exists (f"html/{file}-shmoovin.html"):
+            with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
+                html_lap_times.seek(0)
+                html_lap_times.truncate()
+                html_lap_times.write(shmoovin_html)
+                print(f"wrote shmoovin scores to {file}-shmoovin.html for server {file}")
+        else:
+            with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
+                html_lap_times.write(shmoovin_html)
+                print(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
+
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
@@ -654,6 +788,18 @@ def deletemessage():
             os.remove(f"config/messages/{message}")
             print(f"removing unused message file {message}")
 
+# deletes unused html files
+def delete_html():
+    html_files = os.listdir("html")
+    for html_file in html_files:
+        html_matches_servername = False
+        for file in filenames:
+            if str(file) in str(html_file):
+                html_matches_servername = True
+        if not html_matches_servername:
+            os.remove(f"html/{html_file}")
+            print(f"remove {html_file} because it is no longer used")
+
 
 
 ##### main code ####
@@ -693,7 +839,8 @@ while True:
                     if hasshmoovin == True:
                         scorefind()
                         scores = sortleaderboard()
-                        finalstr = formatleaderboard(scores)
+                        finalstr = formatleaderboard(scores,"discord")
+                        finalstr_html = formatleaderboard(scores,"html")
                     else:
                         finalstr = "NA"
                     # gets laptimes and checks if classcfg exsists
@@ -706,12 +853,16 @@ while True:
                     if classcfg != False:
                         times = sorttimes()
                         timesperclass = sorttimesclass(times,classcfg)
-                        finaltimes = formattimesclass(timesperclass,classcfg)
+                        finaltimes = formattimesclass(timesperclass,classcfg,"discord")
+                        finaltimes_html = formattimesclass(timesperclass,classcfg,"html")
                     # logic if classcfg does not exsist
                     else:
                         times = sorttimes()
-                        finaltimes = formattimes(times)        
+                        finaltimes = formattimes(times,"discord")
+                        finaltimes_html = formattimes(times,"html")         
                     sendtowebhook(finalstr,finaltimes,hasshmoovin)
+                    sendtohtml(finalstr_html,finaltimes_html,hasshmoovin)
         deletemessage()
+        delete_html()
     print(f"waiting for {interval} minutes")
     time.sleep(interval*60)
