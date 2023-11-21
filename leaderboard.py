@@ -7,8 +7,6 @@ from os.path import exists
 import re
 import configparser
 import math
-import threading
-from subprocess import call
 
 ##### variables #####
 logPath = "\\logs\\"
@@ -20,20 +18,20 @@ configp = configparser.ConfigParser(strict=False)
 ### file checks ###
 
 # checks if shmoovin is present in config
-def shmoovincheck():
-    hasshmoovin = False
+def shmoovin_check():
+    has_shmoovin = False
     if exists(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini"):
         with open(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini") as cspconf:
             cspconflines = cspconf.readlines()
             for line in cspconflines:
                 for url in shmoovinurl:
                     if url in line and not ";" in line:
-                        hasshmoovin = True
+                        has_shmoovin = True
                         print(f"shmoovin script was found in server {file}")
-    return(hasshmoovin)
+    return(has_shmoovin)
 
 # checks if class config is present and returns it
-def hasclasscfg():
+def has_classcfg():
     classcfg = False
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
         with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
@@ -45,223 +43,142 @@ def hasclasscfg():
     return(classcfg)
 
 # checks if server folder contains assettoserver.exe used to filter results
-def hasassettoserver():
+def server_type_check():
     if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
         return("assettoserver")
     elif exists(f"{serverspath}\\{file}\\\\acServer.exe"):
         return("acserver")
-    else:
-        return("none")
+
+# checks if laptimes file exsists and if not creates it
+def has_score_file_check(file_name):
+    if not exists(f"{serverspath}\\{file}\\{file_name}.txt"):
+        with open(f"{serverspath}\\{file}\\{file_name}.txt", 'w') as score_file:
+            score_file.write("")
+            print(f"{file_name} was not found so it was created for server {file}")
+
 
 
 
 ### score and time find ###
 
-# reads log and extracts shmoovin scores for assettoserver
-def scorefind():
-    if not exists(f"{serverspath}\\{file}\\leaderboard.txt"):
-        with open(f"{serverspath}\\{file}\\leaderboard.txt", 'w') as leaderboard:
-            leaderboard.write("")
-            print(f"leaderboard was not found so it was created for server {file}")
-    pathToLogs = f"{serverspath}\\{file}{logPath}*"
-    list_of_files = glob.glob(pathToLogs)
-    sorted_files = sorted(list_of_files, key=os.path.getctime)
-    latest_file = str(sorted_files[-1])
-    print(f"Log file that is being read is: {latest_file} for server {file}")
-    # opens and loops trough last logfile to find score entries and writes them to leaderboard.txt
-    with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
-        loglines = f.readlines()
-        for il,logline in enumerate(loglines):
-            hasscore = False
-            name = ""
-            score = ""
-            x = re.search(".* \[INF\] CHAT:.* just scored a.*", logline)
-            xx = re.search(".* \[INF\] CHAT:.* Drift.", logline)
-            if str(xx) != "None":
-                # formats logline to variables to use for leaderboard entry
-                hasscore = True 
-                print(f"found score on: {logline.strip()} for server {file}")
-                x = logline.split(" Drift:")
-                nameArray = x[0].split("CHAT: ")
-                nameNoID = nameArray[1].split(" (")
-                x[0] = nameNoID[0]
-                name = x[0]
-                score = float(x[1])
-            elif str(x) != "None": 
-                # formats logline to variables to use for leaderboard entry 
-                hasscore = True 
-                print(f"found score on: {logline.strip()} for server {file}")
-                x = logline.split("): just scored a ")
-                nameArray = x[0].split("CHAT: ")
-                x[0] = nameArray[1].split(" (")[0]
-                name = x[0]
-                score = float(x[1])
-            # loops in reverse to find input device used by whoever got the laptime, then formats the entry
-            if hasscore:
-                input_method = "Unknown"
-                for ii,input_line in enumerate(reversed(loglines)):
-                    if ii > len(loglines)-il and ii < len(loglines):
-                        has_input_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
-                        if str(has_input_rgx) != "None" and str(name) in input_line:
-                            print(f"found input method on: {input_line.strip()} for server {file}")
-                            input_split = input_line.split("InputMethod=\"")[1]
-                            input_method = input_split.split("\" Rain")[0]
-                            break
-                if input_method == "Unknown":
-                    try:
-                        print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
-                        with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
-                            loglines_second_last = f.readlines()
-                        for input_line in reversed(loglines_second_last):
-                            has_input_secondary_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
-                            if str(has_input_secondary_rgx) != "None" and str(name) in input_line:
-                                print(f"found input method on: {input_line.strip()} for server {file}")
-                                input_split = input_line.split("InputMethod=\"")[1]
-                                input_method = input_split.split("\" Rain")[0]
-                                break
-                    except:
-                        print(f"could not find input method in current log for {str(name)}")
-                # writes obtained scores to leaderboard.txt if score < recorded score for user with same name and car
-                with open(f"{serverspath}\\{file}\\leaderboard.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
-                    leaderboardlinesnew = []
-                    wasfound = False
-                    leaderboardlines = leaderboard.readlines()
-                    for leaderboardline in leaderboardlines:
-                        if str(leaderboardline) == "\n":
-                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                        if "\n" not in str(leaderboardline):
-                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
-                        if name in leaderboardline:
-                            wasfound = True
-                            leaderboardlineArray = leaderboardline.split(',')
-                            oldscore = leaderboardlineArray[1]
-                            if float(score) > float(oldscore):
-                                entry = f"{name},{score},{input_method}\n"
-                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                                leaderboardlinesnew.append(entry)
-                                print(f"new record for {name} with score {score} with input method {input_method} for server {file}")
-                    if wasfound == False:
-                        entry = f"{name},{score},{input_method}\n"
-                        leaderboardlinesnew.append(entry)
-                        print(f"new record for {name} with score {score} with input method {input_method} on server {file}")
-                    leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                    leaderboardwrite = ''.join(leaderboardlinescomb)
-                    leaderboard.seek(0)
-                    leaderboard.truncate()
-                    leaderboard.write(leaderboardwrite)
-
-# reads log and extracts laptimes for assettoserver
-def timefind():
-    if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
-        with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
-            leaderboard.write("")
-            print(f"laptimes was not found so it was created for server {file}")
-    pathToLogs = f"{serverspath}\\{file}{logPath}*"
-    list_of_files = glob.glob(pathToLogs)
-    sorted_files = sorted(list_of_files, key=os.path.getctime)
-    latest_file = str(sorted_files[-1])
-    print(f"Log file that is being read is: {latest_file} for server {file}")
-    # opens and loops trough last logfile to find score entries and writes them to laptimes.txt
-    with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
-        loglines = f.readlines()
-    for il,logline in enumerate(loglines):
-        hasscore = False
-        name = ""
-        score = ""
-        has_lap = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
-        if str(has_lap) != "None":
+# opens and loops trough last logfile to find score entries and writes them to leaderboard.txt
+def score_find():
+    for index_log_line,log_line in enumerate(log_lines):
+        if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
+            # formats logline to variables to use for leaderboard entry
+            print(f"found score on: {logline.strip()} for server {file}")
+            init_split = log_line.split(" Drift:")
+            name_array = init_split[0].split("CHAT: ")
+            name_no_id = name_array[1].split(" (")
+            name = name_no_id
+            score = float(init_split[1])
+            input_method = input_find(index_log_line,log_lines,name)
+            car = find_car(index_log_line,log_lines,name)
+            write_score(name,score,car,input_method,"leaderboard")
+        elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
+            # formats logline to variables to use for leaderboard entry 
+            print(f"found score on: {logline.strip()} for server {file}")
+            init_split = log_line.split("): just scored a ")
+            name_array = init_split[0].split("CHAT: ") 
+            name = name_array[1].split(" (")[0]
+            score = float(init_split[1])
+            input_method = input_find(index_log_line,log_lines,name)
+            car = find_car(index_log_line,log_lines,name)
+            write_score(name,score,car,input_method,"leaderboard")
+        elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
             # formats logline to variables to use for laptime entry
-            hasscore = True 
-            print(f"found laptime on: {logline.strip()} for server {file}")
-            lap_split = logline.split(" cuts, laptime ")
-            nameArray = lap_split[0].split("Lap completed by ")
-            lap_split[0] = nameArray[1].split(",")[0]
-            name = lap_split[0]
+            print(f"found laptime on: {log_line.strip()} for server {file}")
+            lap_split = log_line.split(" cuts, laptime ")
+            name_array = lap_split[0].split("Lap completed by ")
+            name = name_array[1].split(",")[0]
             score = float(lap_split[1])
-            # loops in reverse to find car driven by whoever got the laptime, then formats the entry
-            car = "none"
-            for ic,carline in enumerate(reversed(loglines)):
-                if ic > len(loglines)-il and ic < len(loglines):
-                    has_car_rgx = re.search(".* \[INF\] .* has connected", carline)
-                    if str(has_car_rgx) != "None" and str(name) in carline:
-                        print(f"found car on: {carline.strip()} for server {file}")
-                        car_split = carline.split(" (")
-                        carArray = car_split[2].split(")) has connected")
-                        car = carArray[0]
-                        break
-            if car == "none":
-                print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
-                with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
-                    loglines_second_last = f.readlines()
-                for carline in reversed(loglines_second_last):
-                    has_car_secondary_rgx = re.search(".* \[INF\] .* has connected", carline)
-                    if str(has_car_secondary_rgx) != "None" and str(name) in carline:
-                        print(f"found car on: {carline.strip()} for server {file}")
-                        car_split = carline.split(" (")
-                        carArray = car_split[2].split(")) has connected")
-                        car = carArray[0]
-                        break
-            # loops in reverse to find input device used by whoever got the laptime, then formats the entry
-            input_method = "Unknown"
-            for ii,input_line in enumerate(reversed(loglines)):
-                if ii > len(loglines)-il and ii < len(loglines):
-                    has_input_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
-                    if str(has_input_rgx) != "None" and str(name) in input_line:
-                        print(f"found input method on: {input_line.strip()} for server {file}")
-                        input_split = input_line.split("InputMethod=\"")[1]
-                        input_method = input_split.split("\" Rain")[0]
-                        break
-            if input_method == "Unknown":
-                try:
-                    print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
-                    with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
-                        loglines_second_last = f.readlines()
-                    for input_line in reversed(loglines_second_last):
-                        has_input_secondary_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
-                        if str(has_input_secondary_rgx) != "None" and str(name) in input_line:
-                            print(f"found input method on: {input_line.strip()} for server {file}")
-                            input_split = input_line.split("InputMethod=\"")[1]
-                            input_method = input_split.split("\" Rain")[0]
-                            break
-                except:
-                    print(f"could not find input method in current log for {str(name)}")
-                # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
-            with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
-                leaderboardlinesnew = []
-                wasfound = False
-                leaderboardlines = leaderboard.readlines()
-                for leaderboardline in leaderboardlines:
-                    # extra logic to avoid issues when manually editing laptimes.txt
-                    if str(leaderboardline) == "\n":
-                        leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                    if "\n" not in str(leaderboardline):
-                        leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
-                    # actual logic to save laptime to laptimes.txt
-                    if name in leaderboardline and car in leaderboardline:
-                            wasfound = True
-                            leaderboardlineArray = leaderboardline.split(',')
-                            oldscore = leaderboardlineArray[2]
-                            if score < float(oldscore):
-                                entry = f"{car},{name},{score},{input_method}\n"
-                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                                leaderboardlinesnew.append(entry)
-                                print(f"new laptime for {name} in {car} with time {score} input method {input_method} for server {file}")
-                if wasfound == False:
-                    entry = f"{car},{name},{score},{input_method}\n"
-                    leaderboardlinesnew.append(entry)
-                    print(f"new laptime for {name} in {car} with time {score} and input method {input_method} for server {file}")
-                leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                leaderboardwrite = ''.join(leaderboardlinescomb)
-                leaderboard.seek(0)
-                leaderboard.truncate()
-                leaderboard.write(leaderboardwrite)
+            input_method = input_find(index_log_line,log_lines,name)
+            car = find_car(index_log_line,log_lines,name)
+            write_score(name,score,car,input_method,"laptimes")
+
+# loop to find input method used by whoever got the score
+def input_find(index_log_line,log_lines,name):      
+    input_method = "Unknown"
+    for index_input,input_line in enumerate(reversed(log_lines)):
+        if index_input > len(log_lines)-index_log_line and index_input < len(log_lines):
+            if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)) != "None" and str(name) in input_line:
+                print(f"found input method on: {input_line.strip()} for server {file}")
+                input_split = input_line.split("InputMethod=\"")[1]
+                input_method = input_split.split("\" Rain")[0]
+                return(input_method)
+                break
+    if input_method == "Unknown":
+        try:
+            print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
+            with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as second_log_file:
+                loglines_second_last = second_log_file.readlines()
+            for second_input_line in reversed(loglines_second_last):
+                if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", second_input_line)) != "None" and str(name) in input_line:
+                    print(f"found input method on: {second_input_line.strip()} for server {file}")
+                    input_split = second_input_line.split("InputMethod=\"")[1]
+                    input_method = input_split.split("\" Rain")[0]
+                    return(input_method)
+                    break
+        except:
+            print(f"could not find input method for {str(name)}")
+            return(input_method)
+
+# loop to find car driven by whoever got the score
+def find_car(index_log_line,log_lines,name):
+    car = "none"
+    for index_car_line,car_line in enumerate(reversed(log_lines)):
+        if index_car_line > len(log_lines)-index_log_line and index_car_line < len(log_lines):
+            if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
+                print(f"found car on: {car_line.strip()} for server {file}")
+                car_split = car_line.split(" (")
+                car_array = car_split[2].split(")) has connected")
+                car = car_array[0]
+                return(car)
+                break
+    if car == "none":
+        print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
+        with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
+            loglines_second_last = f.readlines()
+        for car_line in reversed(loglines_second_last):
+            if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
+                print(f"found car on: {car_line.strip()} for server {file}")
+                car_split = car_line.split(" (")
+                car_array = car_split[2].split(")) has connected")
+                car = car_array[0]
+                return(car)
+                break
+
+# # writes obtained scores to appropriate file
+def write_score(name,score,car,input_method,file_name):
+    with open(f"{serverspath}\\{file}\\{file_name}.txt", encoding='utf-8', errors='ignore', mode="r+") as score_file:
+        score_file_lines_new = []
+        was_found = False
+        score_file_lines = score_file.readlines()
+        for score_file_line in score_file_lines:
+            # extra logic to avoid issues when manually editing laptimes.txt
+            if str(score_file_line) == "\n":
+                score_file_lines[score_file_lines.index(score_file_line)] = ""
+            if "\n" not in str(score_file_line):
+                score_file_lines[score_file_lines.index(score_file_line)] = score_file_line+"\n"
+            # actual logic to save laptime to laptimes.txt
+            if name in score_file_line and car in score_file_line:
+                    was_found = True
+                    old_score = score_file_line.split(',')[2]
+                    if score < float(old_score):
+                        entry = f"{car},{name},{score},{input_method}\n"
+                        score_file_lines[score_file_lines.index(score_file_line)] = ""
+                        score_file_lines_new.append(entry)
+                        print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+        if was_found == False:
+            entry = f"{car},{name},{score},{input_method}\n"
+            score_file_lines_new.append(entry)
+            print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+        score_file.seek(0)
+        score_file.truncate()
+        score_file.write(''.join(score_file_lines + score_file_lines_new))
 
 # find laptimes for acServer sessions
 def findtimevanilla():
-    if not exists(f"{serverspath}\\{file}\\laptimes.txt"):
-        with open(f"{serverspath}\\{file}\\laptimes.txt", 'w') as leaderboard:
-            leaderboard.write("")
-            print(f"laptimes was not found so it was created for server {file}")
     pathToResults = f"{serverspath}\\{file}\\results\\*"
     list_of_files = glob.glob(pathToResults)
     latest_file = max(list_of_files, key=os.path.getctime)
@@ -304,31 +221,13 @@ def findtimevanilla():
                     leaderboard.write(leaderboardwrite)
 
 
-
-
 ### sorting and formatting ####
 
-# sorts leaderboard in list per entry within 1 master list, highest score on top
-def sortleaderboard():
+# sort scores in list per entry within 1 master list
+def sort_score(score_type):
     scores = []
-    with open(f"{serverspath}\\{file}\\leaderboard.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
-        for line in leaderboardfile:
-            try:
-                name, score, input_method = line.split(',')
-            except:
-                name, score= line.split(',')
-                input_method = "Unknown"
-            score = score.strip()
-            scores.append([name, score, input_method])
-    scores.sort(key=lambda s: float(s[1]), reverse = True)
-    print(f"sorted leaderboardfile for server {file}")
-    return(scores)
-
-# sort laptimes in list per entry within 1 master list, fastest lap on top
-def sorttimes():
-    scores = []
-    with open(f"{serverspath}\\{file}\\laptimes.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
-        for line in leaderboardfile:
+    with open(f"{serverspath}\\{file}\\{score_type}.txt", 'r', encoding='utf-8', errors='ignore') as score_file:
+        for line in score_file:
             try:
                 car, name, score, input_method = line.split(',')
             except:
@@ -336,30 +235,33 @@ def sorttimes():
                 input_method = "Unknown"
             score = score.strip()
             scores.append([car, name, score, input_method])
-    scores.sort(key=lambda s: float(s[2]), reverse = False)
-    print(f"sorted laptimes for server {file}")
+    if score_type == "laptimes":
+        scores.sort(key=lambda s: float(s[2]), reverse = False)
+    else:
+        scores.sort(key=lambda s: float(s[2]), reverse = True)
+    print(f"sorted scores with type {score_type} for server {file}")
     return(scores)
 
 #sorts times if class configuration is present, outputs lists per class within 1 master list
-def sorttimesclass(scores,classcfg):
-    filteredtimes = []
-    for classselected in classcfg:
+def sort_times_class(scores,classcfg):
+    filtered_times = []
+    for class_selected in classcfg:
         filtered = []
         for score in scores:
-            carnamesplit = score[0].split("-")
+            carname_split = score[0].split("-")
             # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over
-            if str(carnamesplit[0]) in str(classcfg[classselected]):
-                allreadyin = False
+            if str(carname_split[0]) in str(classcfg[class_selected]):
+                allready_in = False
                 for entry in filtered:
                     if str(score[1]) in str(entry):
-                        allreadyin = True
+                        allready_in = True
                         if str(score[2]) < str(entry[2]):
                             filtered.append(score)
-                if not allreadyin:
+                if not allready_in:
                     filtered.append(score)
-        filteredtimes.append(filtered)
+        filtered_times.append(filtered)
     print(f"sorted laptimes for server with multiclass {file}")
-    return(filteredtimes)
+    return(filtered_times)
 
 # formats scores to str to use in webhook
 def formatleaderboard(scores,doc_type):
@@ -846,10 +748,10 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                 }
             ]}
     # checks if leaderboard message was allready created and updates it
-    if exists(f"config/messages/{messagecounter}.txt"):
-        with open(f"config/messages/{messagecounter}.txt") as File:
+    if exists(f"config/messages/{main_loop_counter}.txt"):
+        with open(f"config/messages/{main_loop_counter}.txt") as File:
             messageid = str(File.readline())
-        print(f"{messageid} read from {messagecounter}.txt")
+        print(f"{messageid} read from {main_loop_counter}.txt")
         rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
         if "200" in str(rl):
             print(f"discord message {messageid} updated")
@@ -868,16 +770,16 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             print(f"discord message {messageid} could not be posted")
         if not exists("config/messages"):
             os.mkdir("config/messages")
-        with open(f"config/messages/{messagecounter}.txt", 'w') as File:
+        with open(f"config/messages/{main_loop_counter}.txt", 'w') as File:
             File.write(f"{messageid}")
-            print(f"{messageid} saved in file {messagecounter}.txt")
+            print(f"{messageid} saved in file {main_loop_counter}.txt")
     time.sleep(1)
 
 # deletes unused discord messages
 def deletemessage():
     messagelst= os.listdir("config/messages")
     for index,message in enumerate(messagelst):
-        if index > messagecounter:
+        if index > main_loop_counter:
             with open(f"config/messages/{message}") as File:
                 messageid = str(File.readline())
             rl = requests.delete(f"{webhookurl}/messages/{messageid}",params={'wait': 'true'})
@@ -925,45 +827,46 @@ with open("config/config.json") as config:
 print("starting main loop")
 while True:
     # loop trough folders in server folder
-    messagecounter = -1
+    main_loop_counter = -1
     for serverspath in serverspathlst:
         filenames= os.listdir(str(serverspath))
         print(f"list of folders to check: {filenames}")
         for file in filenames:
             # checks if folder is actually a server folder
             if folderidentifier in file.lower():
-                messagecounter = messagecounter+1
-                hasserver = hasassettoserver()
-                if hasserver != "none":
-                    # checks if shmoovin script exsists
-                    hasshmoovin = shmoovincheck()
-                    if hasshmoovin == True:
-                        scorefind()
-                        scores = sortleaderboard()
+                finalstr = "NA"
+                finalstr_html = "NA"
+                has_shmoovin = False
+                main_loop_counter = main_loop_counter+1
+                server_type = server_type_check()
+                if server_type == "assettoserver":
+                    sorted_files = sorted(glob.glob(f"{serverspath}\\{file}{logPath}*"), key=os.path.getctime)
+                    print(f"Log file that is being read is: {str(sorted_files[-1])} for server {file}")
+                    with open(str(sorted_files[-1]), encoding='utf-8', errors='ignore' "r") as log_file:
+                        log_lines = log_file.readlines()
+                    has_score_file_check("laptimes")
+                    score_find()
+                    has_shmoovin = shmoovin_check()
+                    if has_shmoovin == True:
+                        has_score_file_check("leaderboard")
+                        scores = sort_score("leaderboard")
                         finalstr = formatleaderboard(scores,"discord")
                         finalstr_html = formatleaderboard(scores,"html")
-                    else:
-                        finalstr = "NA"
-                        finalstr_html = "NA"
-                    # gets laptimes and checks if classcfg exsists
-                    if hasserver == "assettoserver":
-                        timefind()
-                    elif hasserver == "acserver":
-                        findtimevanilla()
-                    classcfg = hasclasscfg()
-                    # logic if classcfg does exsist
-                    if classcfg != False:
-                        times = sorttimes()
-                        timesperclass = sorttimesclass(times,classcfg)
-                        finaltimes = formattimesclass(timesperclass,classcfg,"discord")
-                        finaltimes_html = formattimesclass(timesperclass,classcfg,"html")
-                    # logic if classcfg does not exsist
-                    else:
-                        times = sorttimes()
-                        finaltimes = formattimes(times,"discord")
-                        finaltimes_html = formattimes(times,"html")         
-                    sendtowebhook(finalstr,finaltimes,hasshmoovin)
-                    sendtohtml(finalstr_html,finaltimes_html,hasshmoovin)
+                elif server_type == "acserver":
+                    findtimevanilla()
+                times = sort_score("laptimes")
+                classcfg = has_classcfg()
+                # logic if classcfg does exsist
+                if classcfg != False:
+                    timesperclass = sort_times_class(times,classcfg)
+                    finaltimes = formattimesclass(timesperclass,classcfg,"discord")
+                    finaltimes_html = formattimesclass(timesperclass,classcfg,"html")
+                # logic if classcfg does not exsist
+                else:
+                    finaltimes = formattimes(times,"discord")
+                    finaltimes_html = formattimes(times,"html")         
+                sendtowebhook(finalstr,finaltimes,has_shmoovin)
+                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin)
         deletemessage()
         delete_html()
     print(f"waiting for {interval} minutes")
