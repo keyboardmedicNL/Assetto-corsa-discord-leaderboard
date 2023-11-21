@@ -71,7 +71,7 @@ def scorefind():
     # opens and loops trough last logfile to find score entries and writes them to leaderboard.txt
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
         loglines = f.readlines()
-        for logline in loglines:
+        for il,logline in enumerate(loglines):
             hasscore = False
             name = ""
             score = ""
@@ -96,8 +96,32 @@ def scorefind():
                 x[0] = nameArray[1].split(" (")[0]
                 name = x[0]
                 score = float(x[1])
-            # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
-            if hasscore: 
+            # loops in reverse to find input device used by whoever got the laptime, then formats the entry
+            if hasscore:
+                input_method = "Unknown"
+                for ii,input_line in enumerate(reversed(loglines)):
+                    if ii > len(loglines)-il and ii < len(loglines):
+                        has_input_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
+                        if str(has_input_rgx) != "None" and str(name) in input_line:
+                            print(f"found input method on: {input_line.strip()} for server {file}")
+                            input_split = input_line.split("InputMethod=\"")[1]
+                            input_method = input_split.split("\" Rain")[0]
+                            break
+                if input_method == "Unknown":
+                    try:
+                        print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
+                        with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
+                            loglines_second_last = f.readlines()
+                        for input_line in reversed(loglines_second_last):
+                            has_input_secondary_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
+                            if str(has_input_secondary_rgx) != "None" and str(name) in input_line:
+                                print(f"found input method on: {input_line.strip()} for server {file}")
+                                input_split = input_line.split("InputMethod=\"")[1]
+                                input_method = input_split.split("\" Rain")[0]
+                                break
+                    except:
+                        print(f"could not find input method in current log for {str(name)}")
+                # writes obtained scores to leaderboard.txt if score < recorded score for user with same name and car
                 with open(f"{serverspath}\\{file}\\leaderboard.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                     leaderboardlinesnew = []
                     wasfound = False
@@ -112,14 +136,14 @@ def scorefind():
                             leaderboardlineArray = leaderboardline.split(',')
                             oldscore = leaderboardlineArray[1]
                             if float(score) > float(oldscore):
-                                entry = f"{name},{score}\n"
+                                entry = f"{name},{score},{input_method}\n"
                                 leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                                 leaderboardlinesnew.append(entry)
-                                print(f"new record for {name} with score {score} for server {file}")
+                                print(f"new record for {name} with score {score} with input method {input_method} for server {file}")
                     if wasfound == False:
-                        entry = f"{name},{score}\n"
+                        entry = f"{name},{score},{input_method}\n"
                         leaderboardlinesnew.append(entry)
-                        print(f"new record for {name} with score {score} on server {file}")
+                        print(f"new record for {name} with score {score} with input method {input_method} on server {file}")
                     leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
                     leaderboardwrite = ''.join(leaderboardlinescomb)
                     leaderboard.seek(0)
@@ -144,26 +168,25 @@ def timefind():
         hasscore = False
         name = ""
         score = ""
-        x = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
-        if str(x) != "None":
+        has_lap = re.search(".* \[INF\] Lap completed by.* 0 cuts.*", logline)
+        if str(has_lap) != "None":
             # formats logline to variables to use for laptime entry
             hasscore = True 
             print(f"found laptime on: {logline.strip()} for server {file}")
-            x = logline.split(" cuts, laptime ")
-            print(x)
-            nameArray = x[0].split("Lap completed by ")
-            x[0] = nameArray[1].split(",")[0]
-            name = x[0]
-            score = float(x[1])
+            lap_split = logline.split(" cuts, laptime ")
+            nameArray = lap_split[0].split("Lap completed by ")
+            lap_split[0] = nameArray[1].split(",")[0]
+            name = lap_split[0]
+            score = float(lap_split[1])
             # loops in reverse to find car driven by whoever got the laptime, then formats the entry
             car = "none"
             for ic,carline in enumerate(reversed(loglines)):
                 if ic > len(loglines)-il and ic < len(loglines):
-                    xxx = re.search(".* \[INF\] .* has connected", carline)
-                    if str(xxx) != "None" and str(name) in carline:
+                    has_car_rgx = re.search(".* \[INF\] .* has connected", carline)
+                    if str(has_car_rgx) != "None" and str(name) in carline:
                         print(f"found car on: {carline.strip()} for server {file}")
-                        x = carline.split(" (")
-                        carArray = x[2].split(")) has connected")
+                        car_split = carline.split(" (")
+                        carArray = car_split[2].split(")) has connected")
                         car = carArray[0]
                         break
             if car == "none":
@@ -171,13 +194,37 @@ def timefind():
                 with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
                     loglines_second_last = f.readlines()
                 for carline in reversed(loglines_second_last):
-                    xxxx = re.search(".* \[INF\] .* has connected", carline)
-                    if str(xxxx) != "None" and str(name) in carline:
+                    has_car_secondary_rgx = re.search(".* \[INF\] .* has connected", carline)
+                    if str(has_car_secondary_rgx) != "None" and str(name) in carline:
                         print(f"found car on: {carline.strip()} for server {file}")
-                        x = carline.split(" (")
-                        carArray = x[2].split(")) has connected")
+                        car_split = carline.split(" (")
+                        carArray = car_split[2].split(")) has connected")
                         car = carArray[0]
                         break
+            # loops in reverse to find input device used by whoever got the laptime, then formats the entry
+            input_method = "Unknown"
+            for ii,input_line in enumerate(reversed(loglines)):
+                if ii > len(loglines)-il and ii < len(loglines):
+                    has_input_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
+                    if str(has_input_rgx) != "None" and str(name) in input_line:
+                        print(f"found input method on: {input_line.strip()} for server {file}")
+                        input_split = input_line.split("InputMethod=\"")[1]
+                        input_method = input_split.split("\" Rain")[0]
+                        break
+            if input_method == "Unknown":
+                try:
+                    print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
+                    with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
+                        loglines_second_last = f.readlines()
+                    for input_line in reversed(loglines_second_last):
+                        has_input_secondary_rgx = re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)
+                        if str(has_input_secondary_rgx) != "None" and str(name) in input_line:
+                            print(f"found input method on: {input_line.strip()} for server {file}")
+                            input_split = input_line.split("InputMethod=\"")[1]
+                            input_method = input_split.split("\" Rain")[0]
+                            break
+                except:
+                    print(f"could not find input method in current log for {str(name)}")
                 # writes obtained laptime to laptimes.txt if laptime < recorded laptime for user with same name and car
             with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                 leaderboardlinesnew = []
@@ -195,14 +242,14 @@ def timefind():
                             leaderboardlineArray = leaderboardline.split(',')
                             oldscore = leaderboardlineArray[2]
                             if score < float(oldscore):
-                                entry = f"{car},{name},{score}\n"
+                                entry = f"{car},{name},{score},{input_method}\n"
                                 leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                                 leaderboardlinesnew.append(entry)
-                                print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                                print(f"new laptime for {name} in {car} with time {score} input method {input_method} for server {file}")
                 if wasfound == False:
-                    entry = f"{car},{name},{score}\n"
+                    entry = f"{car},{name},{score},{input_method}\n"
                     leaderboardlinesnew.append(entry)
-                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                    print(f"new laptime for {name} in {car} with time {score} and input method {input_method} for server {file}")
                 leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
                 leaderboardwrite = ''.join(leaderboardlinescomb)
                 leaderboard.seek(0)
@@ -266,9 +313,13 @@ def sortleaderboard():
     scores = []
     with open(f"{serverspath}\\{file}\\leaderboard.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
         for line in leaderboardfile:
-            name, score = line.split(',')
+            try:
+                name, score, input_method = line.split(',')
+            except:
+                name, score= line.split(',')
+                input_method = "Unknown"
             score = score.strip()
-            scores.append([name, score])
+            scores.append([name, score, input_method])
     scores.sort(key=lambda s: float(s[1]), reverse = True)
     print(f"sorted leaderboardfile for server {file}")
     return(scores)
@@ -278,9 +329,13 @@ def sorttimes():
     scores = []
     with open(f"{serverspath}\\{file}\\laptimes.txt", 'r', encoding='utf-8', errors='ignore') as leaderboardfile:
         for line in leaderboardfile:
-            car, name, score = line.split(',')
+            try:
+                car, name, score, input_method = line.split(',')
+            except:
+                car, name, score= line.split(',')
+                input_method = "Unknown"
             score = score.strip()
-            scores.append([car, name, score])
+            scores.append([car, name, score, input_method])
     scores.sort(key=lambda s: float(s[2]), reverse = False)
     print(f"sorted laptimes for server {file}")
     return(scores)
@@ -319,15 +374,27 @@ def formatleaderboard(scores,doc_type):
     for score in scores:
         scorecounter = scorecounter + 1
         if scorecounter <= scorelength:
-            score_format = ' '.join(score)
-            score_format = score_format.strip()
+            score_input = score[2].strip()
             if doc_type == "discord":
-                finallist.append(f"{scorecounter}. {score_format}\n")
+                if show_input == "true":
+                    finallist.append(f"{scorecounter}. {score[0]} - {score_input} - {score[1]}\n")
+                else:
+                    finallist.append(f"{scorecounter}. {name} {score_from_file}\n")
             if doc_type == "html":
-                finallist.append(f"{scorecounter}. {score_format}\n")
-                short_name = str(score[0])[0:8]
-                html_score_format = f"<b>{short_name}</b> {str(score[1])}"
-                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+                if "gamepad" in str(score[2].lower()):
+                    score_input = score[2].replace("Gamepad", "Control")
+                elif "Keyboard" in str(score[2].lower()):
+                    score_input = score[2].replace("Keyboard", "Keyboard")
+                if show_input == "true":
+                    finallist.append(f"{scorecounter}. {score[0]} - {score_input} -  {score[1]}\n")
+                    short_name = str(score[0])[0:8]
+                    html_score_format = f"<b>{short_name}</b> {score_input} {str(score[1])}"
+                    finallist_html.append(f"<div class=\"namebox\">\n<p> {scorecounter}. {html_score_format}</p>\n</div>\n")
+                else:
+                    finallist.append(f"{scorecounter}. {name} {score_from_file}\n")
+                    short_name = str(score[0])[0:8]
+                    html_score_format = f"<b>{short_name}</b> {str(score[1])}"
+                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
             finalstr = "".join(finallist)
             finalstr_html = "".join(finallist_html)
         else:
@@ -361,14 +428,27 @@ def formattimes(scores,doc_type):
             minutes= math.floor(laptime/(1000*60)%60)
             laptime = (laptime-(minutes*(1000*60)))
             seconds = (laptime/1000)
-            score_format = f"{score[1]} {minutes}:{seconds}"
+            score_input = score[3].strip()
             if doc_type == "discord":
-                finallist.append(f"{scorecounter}. {score_format}\n")
+                if show_input == "true":
+                    finallist.append(f"{scorecounter}. {score[1]} - {score_input} - {minutes}:{seconds}\n")
+                else:
+                    finallist.append(f"{scorecounter}. {score[1]} - {minutes}:{seconds}\n")
             elif doc_type == "html":
-                finallist.append(f"{scorecounter}. {score_format}\n")
-                short_name = str(score[1])[0:8]
-                html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
-                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+                if "gamepad" in str(score[3].lower()):
+                    score_input = score[3].replace("Gamepad", "Control")
+                elif "Keyboard" in str(score[3].lower()):
+                    score_input = score[3].replace("Keyboard", "Keyboard")
+                if show_input == "true":
+                    finallist.append(f"{scorecounter}. {score[1]} - {score_input} - {minutes}:{seconds}\n")
+                    short_name = str(score[1])[0:8]
+                    html_score_format = f"<b>{short_name}</b> - {score_input} - {minutes}:{seconds}"
+                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+                else:
+                    finallist.append(f"{scorecounter}. {score[1]} - {minutes}:{seconds}\n")
+                    short_name = str(score[1])[0:8]
+                    html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
+                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
             finalstr = "".join(finallist)
             finalstr_html = "".join(finallist_html)
     print(f"formatted laptimes for server {file}")
@@ -402,13 +482,27 @@ def formattimesclass(scores,classcfg,doc_type):
                 laptime = (laptime-(minutes*(1000*60)))
                 seconds = (laptime/1000)
                 score_format = f"{classcore[1]} {minutes}:{seconds}"
+                score_input = classcore[3].strip()
                 if doc_type == "discord":
-                    finallist.append(f"{scorecounter}. {score_format}\n")
-                if doc_type == "html":
-                    finallist.append(f"{scorecounter}. {score_format}\n")
-                    short_name = str(classcore[1])[0:8]
-                    html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
-                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+                    if show_input == "true":
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {minutes}:{seconds}\n")
+                    else:
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {minutes}:{seconds}\n")
+                elif doc_type == "html":
+                    if "gamepad" in str(classcore[3].lower()):
+                        score_input = classcore[3].replace("Gamepad", "Control")
+                    elif "Keyboard" in str(classcore[3].lower()):
+                        score_input = classcore[3].replace("Keyboard", "Keyboard")
+                    if show_input == "true":
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {minutes}:{seconds}\n")
+                        short_name = str(classcore[1])[0:8]
+                        html_score_format = f"<b>{short_name}</b> - {score_input} - {minutes}:{seconds}"
+                        finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+                    else:
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {minutes}:{seconds}\n")
+                        short_name = str(classcore[1])[0:8]
+                        html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
+                        finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
     finalstr = "".join(finallist)
     finalstr_html = "".join(finallist_html)
     if finalstr == "":
@@ -456,32 +550,38 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin):
                             width: 320px;
                             line-height:1%;
                             padding: 1px;
+                            padding-right: 10px;
                             margin: 2px;
                             background-color: #000000;
                             color: white;
-                            border-left-style: solid;
+                            border-right-style: solid;
                             border-color: orange;
+                            text-align: right;
                             }
                         .classbox {
                             width: 320px;
                             line-height:100%;
                             padding: 1px;
+                            padding-right: 10px;
                             margin: 2px;
                             background-color: orange;
                             color: white;
-                            border-left-style: solid;
+                            border-right-style: solid;
                             border-color: orange;
+                            text-align: right;
                             }
                         .titlebox {
                             width: 320px;
                             line-height:200%;
                             padding: 1px;
+                            padding-right: 10px;
                             margin: 2px;
                             background-color: black;
                             color: white;
-                            border-left-style: solid;
+                            border-right-style: solid;
                             border-color: orange;
                             word-wrap: break-word;
+                            text-align: right;
                             }
                         </style>
                         </head>
@@ -817,6 +917,7 @@ with open("config/config.json") as config:
     onlyleaderboards = configJson["onlyleaderboards"]
     serveradress = configJson["serveradress"]
     serveradressdisplay = configJson["serveradressdisplay"]
+    show_input = configJson["show_input"]
     shmoovinurl = driftscript + overtakescript
     print("succesfully loaded config")
 
@@ -843,6 +944,7 @@ while True:
                         finalstr_html = formatleaderboard(scores,"html")
                     else:
                         finalstr = "NA"
+                        finalstr_html = "NA"
                     # gets laptimes and checks if classcfg exsists
                     if hasserver == "assettoserver":
                         timefind()

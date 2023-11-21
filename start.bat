@@ -1,3 +1,2 @@
 @echo off
-python "leaderboard.py"
-pause
+start "leaderboard" python "leaderboard.py"
