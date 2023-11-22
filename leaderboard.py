@@ -20,6 +20,7 @@ configp = configparser.ConfigParser(strict=False)
 # checks if shmoovin is present in config
 def shmoovin_check():
     has_shmoovin = False
+    shmoovin_type = ""
     if exists(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini"):
         try:
             configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
@@ -71,10 +72,10 @@ def score_find():
     for index_log_line,log_line in enumerate(log_lines):
         if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
             # formats logline to variables to use for drift entry
-            print(f"found score on: {logline.strip()} for server {file}")
+            print(f"found score on: {log_line.strip()} for server {file}")
             init_split = log_line.split(" Drift:")
             name_array = init_split[0].split("CHAT: ")
-            name_no_id = name_array[1].split(" (")
+            name_no_id = name_array[1].split(" (")[0]
             name = name_no_id
             score = float(init_split[1])
             input_method = input_find(index_log_line,log_lines,name)
@@ -82,7 +83,7 @@ def score_find():
             write_score(name,score,car,input_method,"leaderboard")
         elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
             # formats logline to variables to use for overtake entry 
-            print(f"found score on: {logline.strip()} for server {file}")
+            print(f"found score on: {log_line.strip()} for server {file}")
             init_split = log_line.split("): just scored a ")
             name_array = init_split[0].split("CHAT: ") 
             name = name_array[1].split(" (")[0]
@@ -232,11 +233,23 @@ def sort_score(score_type,classcfg):
     filtered_times = []
     with open(f"{serverspath}\\{file}\\{score_type}.txt", 'r', encoding='utf-8', errors='ignore') as score_file:
         for line in score_file:
-            try:
-                car, name, score, input_method = line.split(',')
-            except:
-                car, name, score= line.split(',')
-                input_method = "Unknown"
+            if score_type == "laptimes":
+                try:
+                    car, name, score, input_method = line.split(',')
+                except:
+                    car, name, score= line.split(',')
+                    input_method = "Unknown"
+            elif score_type == "leaderboard":
+                try:
+                    car, name, score, input_method = line.split(',')
+                except:
+                    try:
+                        name, score, input_method = line.split(',')
+                        car = "Unknown"
+                    except:
+                        name, score,= line.split(',')
+                        input_method = "Unknown"
+                        car = "Unknown"
             score = score.strip()
             scores.append([car, name, score, input_method])
     if score_type == "laptimes":
@@ -250,11 +263,17 @@ def sort_score(score_type,classcfg):
             # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over
             if str(carname_split[0]) in str(classcfg[class_selected]) or class_selected == "none":
                 allready_in = False
-                for entry in filtered:
+                for index_entry,entry in enumerate(filtered):
                     if str(score[1]) in str(entry):
                         allready_in = True
-                        if str(score[2]) < str(entry[2]):
-                            filtered.append(score)
+                        if score_type == "laptimes":
+                            if float(score[2]) < float(entry[2]):
+                                del filtered[index_entry]
+                                filtered.append(score)
+                        elif score_type == "leaderboard":
+                            if float(score[2]) > float(entry[2]):
+                                del filtered[index_entry]
+                                filtered.append(score)
                 if not allready_in:
                     filtered.append(score)
         filtered_times.append(filtered)
