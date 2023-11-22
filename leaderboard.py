@@ -20,15 +20,21 @@ configp = configparser.ConfigParser(strict=False)
 # checks if shmoovin is present in config
 def shmoovin_check():
     has_shmoovin = False
+    shmoovin_type = ""
     if exists(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini"):
-        with open(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini") as cspconf:
-            cspconflines = cspconf.readlines()
-            for line in cspconflines:
-                for url in shmoovinurl:
-                    if url in line and not ";" in line:
-                        has_shmoovin = True
-                        print(f"shmoovin script was found in server {file}")
-    return(has_shmoovin)
+        try:
+            configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
+            scripttype = str(configp['SCRIPT_...']['SCRIPT'])
+            scripttype = scripttype.replace("'","")
+            if scripttype  in overtakescript:
+                shmoovin_type = "Shmoovin overtake leaderboard"
+                has_shmoovin = True
+            elif scripttype in driftscript:
+                shmoovin_type = "Shmoovin drift leaderboard"
+                has_shmoovin = True
+        except:
+            pass
+    return(has_shmoovin,shmoovin_type)
 
 # checks if class config is present and returns it
 def has_classcfg():
@@ -61,11 +67,11 @@ def has_score_file_check(file_name):
 
 ### score and time find ###
 
-# opens and loops trough last logfile to find score entries and writes them to leaderboard.txt
+# opens and loops trough last logfile to find score entries and writes them to the appropriate files
 def score_find():
     for index_log_line,log_line in enumerate(log_lines):
         if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
-            # formats logline to variables to use for leaderboard entry
+            # formats logline to variables to use for drift entry
             print(f"found score on: {logline.strip()} for server {file}")
             init_split = log_line.split(" Drift:")
             name_array = init_split[0].split("CHAT: ")
@@ -76,7 +82,7 @@ def score_find():
             car = find_car(index_log_line,log_lines,name)
             write_score(name,score,car,input_method,"leaderboard")
         elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
-            # formats logline to variables to use for leaderboard entry 
+            # formats logline to variables to use for overtake entry 
             print(f"found score on: {logline.strip()} for server {file}")
             init_split = log_line.split("): just scored a ")
             name_array = init_split[0].split("CHAT: ") 
@@ -179,9 +185,7 @@ def write_score(name,score,car,input_method,file_name):
 
 # find laptimes for acServer sessions
 def findtimevanilla():
-    pathToResults = f"{serverspath}\\{file}\\results\\*"
-    list_of_files = glob.glob(pathToResults)
-    latest_file = max(list_of_files, key=os.path.getctime)
+    latest_file = max(glob.glob(f"{serverspath}\\{file}\\results\\*"), key=os.path.getctime)
     print(f"results file that is being read is: {latest_file} for server {file}")
     with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
         resultsJson = json.load(f)
@@ -245,6 +249,7 @@ def sort_score(score_type):
 #sorts times if class configuration is present, outputs lists per class within 1 master list
 def sort_times_class(scores,classcfg):
     filtered_times = []
+    classes = classcfg
     for class_selected in classcfg:
         filtered = []
         for score in scores:
@@ -263,52 +268,8 @@ def sort_times_class(scores,classcfg):
     print(f"sorted laptimes for server with multiclass {file}")
     return(filtered_times)
 
-# formats scores to str to use in webhook
-def formatleaderboard(scores,doc_type):
-    finallist = []
-    finallist_html = []
-    scorecounter = 0
-    scorelength = len(scores)
-    finalstr = "currently empty"
-    finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
-    if scorelength >= leaderboardlimit:
-        scorelength = leaderboardlimit
-    for score in scores:
-        scorecounter = scorecounter + 1
-        if scorecounter <= scorelength:
-            score_input = score[2].strip()
-            if doc_type == "discord":
-                if show_input == "true":
-                    finallist.append(f"{scorecounter}. {score[0]} - {score_input} - {score[1]}\n")
-                else:
-                    finallist.append(f"{scorecounter}. {name} {score_from_file}\n")
-            if doc_type == "html":
-                if "gamepad" in str(score[2].lower()):
-                    score_input = score[2].replace("Gamepad", "Control")
-                elif "Keyboard" in str(score[2].lower()):
-                    score_input = score[2].replace("Keyboard", "Keyboard")
-                if show_input == "true":
-                    finallist.append(f"{scorecounter}. {score[0]} - {score_input} -  {score[1]}\n")
-                    short_name = str(score[0])[0:8]
-                    html_score_format = f"<b>{short_name}</b> {score_input} {str(score[1])}"
-                    finallist_html.append(f"<div class=\"namebox\">\n<p> {scorecounter}. {html_score_format}</p>\n</div>\n")
-                else:
-                    finallist.append(f"{scorecounter}. {name} {score_from_file}\n")
-                    short_name = str(score[0])[0:8]
-                    html_score_format = f"<b>{short_name}</b> {str(score[1])}"
-                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
-            finalstr = "".join(finallist)
-            finalstr_html = "".join(finallist_html)
-        else:
-            break
-    print(f"formatted leaderboard for server {file}")
-    if doc_type == "discord":
-        return(finalstr)
-    elif doc_type == "html":
-        return(finalstr_html)
-
 #formats laptimes to str to use in webhook
-def formattimes(scores,doc_type):
+def formattimes(scores,doc_type,score_type):
     finallist = []
     finallist_html = []
     scorecounter = 0
@@ -337,10 +298,6 @@ def formattimes(scores,doc_type):
                 else:
                     finallist.append(f"{scorecounter}. {score[1]} - {minutes}:{seconds}\n")
             elif doc_type == "html":
-                if "gamepad" in str(score[3].lower()):
-                    score_input = score[3].replace("Gamepad", "Control")
-                elif "Keyboard" in str(score[3].lower()):
-                    score_input = score[3].replace("Keyboard", "Keyboard")
                 if show_input == "true":
                     finallist.append(f"{scorecounter}. {score[1]} - {score_input} - {minutes}:{seconds}\n")
                     short_name = str(score[1])[0:8]
@@ -391,10 +348,6 @@ def formattimesclass(scores,classcfg,doc_type):
                     else:
                         finallist.append(f"{scorecounter}. {classcore[1]} - {minutes}:{seconds}\n")
                 elif doc_type == "html":
-                    if "gamepad" in str(classcore[3].lower()):
-                        score_input = classcore[3].replace("Gamepad", "Control")
-                    elif "Keyboard" in str(classcore[3].lower()):
-                        score_input = classcore[3].replace("Keyboard", "Keyboard")
                     if show_input == "true":
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {minutes}:{seconds}\n")
                         short_name = str(classcore[1])[0:8]
@@ -417,19 +370,9 @@ def formattimesclass(scores,classcfg,doc_type):
         return(finalstr_html)
            
 # formats and sends to html files for webserver
-def sendtohtml(finalstr,finaltimes,hasshmoovin):
+def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
-    try:
-        configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
-        scripttype = str(configp['SCRIPT_...']['SCRIPT'])
-        scripttype = scripttype.replace("'","")
-        if scripttype  in overtakescript:
-            description = "Shmoovin overtake leaderboard"
-        elif scripttype in driftscript:
-            description = "Shmoovin drift leaderboard"
-    except:
-        pass
     showtimes = True
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
         with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
@@ -440,7 +383,7 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin):
                 showtimes = False
         except:
             pass
-    if not exists(f"html"):
+    if not exists("html"):
         os.mkdir("html")
     pre_html = ("""<html>
                         <head>
@@ -503,7 +446,7 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin):
                 html_lap_times.write(times_html)
                 print(f"{file}-times.html was created with laptimes for server {file}")
     if hasshmoovin:
-        shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{description}</h3>\n</div>\n{finalstr}\n{refresh_script}"
+        shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
         if exists (f"html/{file}-shmoovin.html"):
             with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
                 html_lap_times.seek(0)
@@ -516,20 +459,9 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin):
                 print(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
-def sendtowebhook(finalstr,finaltimes,hasshmoovin):
+def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
-    # gets shmoovin script type from config
-    try:
-        configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
-        scripttype = str(configp['SCRIPT_...']['SCRIPT'])
-        scripttype = scripttype.replace("'","")
-        if scripttype  in overtakescript:
-            description = "Shmoovin overtake leaderboard"
-        elif scripttype in driftscript:
-            description = "Shmoovin drift leaderboard"
-    except:
-        pass
     # checks if laptimes should be shown
     showtimes = True
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
@@ -571,7 +503,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
     # returns correct format based on selected parameters
     if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
         print(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
-        data = {"embeds": [
+        data_top = {"embeds": [
                 {
                     "title": name,
                     "description":"",
@@ -600,7 +532,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                             "value": finaltimes
                         },
                         {
-                            "name": description,
+                            "name": shmoovin_type,
                             "value": finalstr
                         }
                     ]
@@ -695,7 +627,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                             "inline": "true" 
                         },
                         {
-                            "name": description,
+                            "name": shmoovin_type,
                             "value": finalstr
                         }
                     ]
@@ -713,7 +645,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                             "value": finaltimes
                         },
                         {
-                            "name": description,
+                            "name": shmoovin_type,
                             "value": finalstr
                         }
                     ]
@@ -741,7 +673,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
                     "description":"",
                     "fields": [
                         {
-                            "name": description,
+                            "name": shmoovin_type,
                             "value": finalstr
                         }
                     ]
@@ -757,7 +689,6 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
             print(f"discord message {messageid} updated")
         else:
             print(f"discord message {messageid} could not be updated")
-
     # creates leaderboard message if not allready created
     else:
         rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
@@ -777,16 +708,16 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin):
 
 # deletes unused discord messages
 def deletemessage():
-    messagelst= os.listdir("config/messages")
-    for index,message in enumerate(messagelst):
+    message_lst= os.listdir("config/messages")
+    for index,message in enumerate(message_lst):
         if index > main_loop_counter:
             with open(f"config/messages/{message}") as File:
-                messageid = str(File.readline())
-            rl = requests.delete(f"{webhookurl}/messages/{messageid}",params={'wait': 'true'})
+                message_id = str(File.readline())
+            rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
             if "204" in str(rl):
-                print(f"discord message {messageid} is unused and is now deleted")
+                print(f"discord message {message_id} is unused and is now deleted")
             else:
-                print(f"discord message {messageid} could not be deleted")
+                print(f"discord message {message_id} could not be deleted")
             os.remove(f"config/messages/{message}")
             print(f"removing unused message file {message}")
 
@@ -846,7 +777,7 @@ while True:
                         log_lines = log_file.readlines()
                     has_score_file_check("laptimes")
                     score_find()
-                    has_shmoovin = shmoovin_check()
+                    has_shmoovin, shmoovin_type = shmoovin_check()
                     if has_shmoovin == True:
                         has_score_file_check("leaderboard")
                         scores = sort_score("leaderboard")
