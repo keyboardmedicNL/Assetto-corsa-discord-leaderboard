@@ -20,7 +20,6 @@ configp = configparser.ConfigParser(strict=False)
 # checks if shmoovin is present in config
 def shmoovin_check():
     has_shmoovin = False
-    shmoovin_type = ""
     if exists(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini"):
         try:
             configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
@@ -38,7 +37,7 @@ def shmoovin_check():
 
 # checks if class config is present and returns it
 def has_classcfg():
-    classcfg = False
+    classcfg = {"none": ["none"]}
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
         with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
             configJson = json.load(config)
@@ -228,8 +227,9 @@ def findtimevanilla():
 ### sorting and formatting ####
 
 # sort scores in list per entry within 1 master list
-def sort_score(score_type):
+def sort_score(score_type,classcfg):
     scores = []
+    filtered_times = []
     with open(f"{serverspath}\\{file}\\{score_type}.txt", 'r', encoding='utf-8', errors='ignore') as score_file:
         for line in score_file:
             try:
@@ -241,21 +241,14 @@ def sort_score(score_type):
             scores.append([car, name, score, input_method])
     if score_type == "laptimes":
         scores.sort(key=lambda s: float(s[2]), reverse = False)
-    else:
+    elif score_type == "leaderboard":
         scores.sort(key=lambda s: float(s[2]), reverse = True)
-    print(f"sorted scores with type {score_type} for server {file}")
-    return(scores)
-
-#sorts times if class configuration is present, outputs lists per class within 1 master list
-def sort_times_class(scores,classcfg):
-    filtered_times = []
-    classes = classcfg
     for class_selected in classcfg:
         filtered = []
         for score in scores:
             carname_split = score[0].split("-")
             # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over
-            if str(carname_split[0]) in str(classcfg[class_selected]):
+            if str(carname_split[0]) in str(classcfg[class_selected]) or class_selected == "none":
                 allready_in = False
                 for entry in filtered:
                     if str(score[1]) in str(entry):
@@ -265,59 +258,11 @@ def sort_times_class(scores,classcfg):
                 if not allready_in:
                     filtered.append(score)
         filtered_times.append(filtered)
-    print(f"sorted laptimes for server with multiclass {file}")
+    print(f"sorted scores for server {file}")
     return(filtered_times)
 
-#formats laptimes to str to use in webhook
-def formattimes(scores,doc_type,score_type):
-    finallist = []
-    finallist_html = []
-    scorecounter = 0
-    scorelength = len(scores)
-    finalstr = "currently empty"
-    finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
-    if scorelength >= leaderboardlimit:
-        scorelength = leaderboardlimit
-    for score in scores:
-        allreadyin = False
-        name = score[1]  
-        for entry in finallist:
-            if str(name) in str(entry):
-                allreadyin = True
-        if scorecounter <= scorelength-1 and allreadyin != True:
-            scorecounter = scorecounter + 1
-            # math to convert from ms to minutes:seconds.miliseconds
-            laptime = float(score[2])
-            minutes= math.floor(laptime/(1000*60)%60)
-            laptime = (laptime-(minutes*(1000*60)))
-            seconds = (laptime/1000)
-            score_input = score[3].strip()
-            if doc_type == "discord":
-                if show_input == "true":
-                    finallist.append(f"{scorecounter}. {score[1]} - {score_input} - {minutes}:{seconds}\n")
-                else:
-                    finallist.append(f"{scorecounter}. {score[1]} - {minutes}:{seconds}\n")
-            elif doc_type == "html":
-                if show_input == "true":
-                    finallist.append(f"{scorecounter}. {score[1]} - {score_input} - {minutes}:{seconds}\n")
-                    short_name = str(score[1])[0:8]
-                    html_score_format = f"<b>{short_name}</b> - {score_input} - {minutes}:{seconds}"
-                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
-                else:
-                    finallist.append(f"{scorecounter}. {score[1]} - {minutes}:{seconds}\n")
-                    short_name = str(score[1])[0:8]
-                    html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
-                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
-            finalstr = "".join(finallist)
-            finalstr_html = "".join(finallist_html)
-    print(f"formatted laptimes for server {file}")
-    if doc_type == "discord":
-        return(finalstr)
-    elif doc_type == "html":
-        return(finalstr_html)
-
 # formats laptimes if class configuration is present to str for use in webhook
-def formattimesclass(scores,classcfg,doc_type):
+def format_scores(scores,classcfg,doc_type,score_type):
     finallist = []
     classlist = []
     finallist_html = []
@@ -327,36 +272,39 @@ def formattimesclass(scores,classcfg,doc_type):
         scorelength = len(score)
         scorecounter = 0
         if scorelength > 0:
-            if doc_type == "discord":
+            if doc_type == "discord" and str(classlist[i]) != "none":
                 finallist.append(f"\n***class: {str(classlist[i])}***:\n")
-            elif doc_type == "html":
+            elif doc_type == "html" and str(classlist[i]) != "none":
                 finallist_html.append(f"\n<div class=\"classbox\">\n<h3>class: {str(classlist[i])}</h3>\n</div>\n")
         if scorelength >= leaderboardlimit:
             scorelength = leaderboardlimit
         for classcore in scores[i]:
             scorecounter = scorecounter + 1
             if scorecounter <= scorelength:
-                laptime = float(classcore[2])
-                minutes= math.floor(laptime/(1000*60)%60)
-                laptime = (laptime-(minutes*(1000*60)))
-                seconds = (laptime/1000)
-                score_format = f"{classcore[1]} {minutes}:{seconds}"
+                if score_type == "laptimes":
+                    laptime = float(classcore[2])
+                    minutes= math.floor(laptime/(1000*60)%60)
+                    laptime = (laptime-(minutes*(1000*60)))
+                    seconds = (laptime/1000)
+                    score_format = f"{minutes}:{seconds}"
+                elif score_type == "leaderboard":
+                    score_format = float(classcore[2])
                 score_input = classcore[3].strip()
                 if doc_type == "discord":
                     if show_input == "true":
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {minutes}:{seconds}\n")
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
                     else:
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {minutes}:{seconds}\n")
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
                 elif doc_type == "html":
                     if show_input == "true":
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {minutes}:{seconds}\n")
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
                         short_name = str(classcore[1])[0:8]
-                        html_score_format = f"<b>{short_name}</b> - {score_input} - {minutes}:{seconds}"
+                        html_score_format = f"<b>{short_name}</b> - {score_input} - {score_format}"
                         finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
                     else:
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {minutes}:{seconds}\n")
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
                         short_name = str(classcore[1])[0:8]
-                        html_score_format = f"<b>{short_name}</b> {minutes}:{seconds}"
+                        html_score_format = f"<b>{short_name}</b> {score_format}"
                         finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
     finalstr = "".join(finallist)
     finalstr_html = "".join(finallist_html)
@@ -503,7 +451,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     # returns correct format based on selected parameters
     if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
         print(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
-        data_top = {"embeds": [
+        data = {"embeds": [
                 {
                     "title": name,
                     "description":"",
@@ -768,8 +716,10 @@ while True:
                 finalstr = "NA"
                 finalstr_html = "NA"
                 has_shmoovin = False
+                shmoovin_type = "none"
                 main_loop_counter = main_loop_counter+1
                 server_type = server_type_check()
+                classcfg = has_classcfg()
                 if server_type == "assettoserver":
                     sorted_files = sorted(glob.glob(f"{serverspath}\\{file}{logPath}*"), key=os.path.getctime)
                     print(f"Log file that is being read is: {str(sorted_files[-1])} for server {file}")
@@ -780,24 +730,16 @@ while True:
                     has_shmoovin, shmoovin_type = shmoovin_check()
                     if has_shmoovin == True:
                         has_score_file_check("leaderboard")
-                        scores = sort_score("leaderboard")
-                        finalstr = formatleaderboard(scores,"discord")
-                        finalstr_html = formatleaderboard(scores,"html")
+                        scores = sort_score("leaderboard",classcfg)
+                        finalstr = format_scores(scores,classcfg,"discord","leaderboard")
+                        finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
                 elif server_type == "acserver":
                     findtimevanilla()
-                times = sort_score("laptimes")
-                classcfg = has_classcfg()
-                # logic if classcfg does exsist
-                if classcfg != False:
-                    timesperclass = sort_times_class(times,classcfg)
-                    finaltimes = formattimesclass(timesperclass,classcfg,"discord")
-                    finaltimes_html = formattimesclass(timesperclass,classcfg,"html")
-                # logic if classcfg does not exsist
-                else:
-                    finaltimes = formattimes(times,"discord")
-                    finaltimes_html = formattimes(times,"html")         
-                sendtowebhook(finalstr,finaltimes,has_shmoovin)
-                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin)
+                times = sort_score("laptimes",classcfg)
+                finaltimes = format_scores(times,classcfg,"discord","laptimes")
+                finaltimes_html = format_scores(times,classcfg,"html","laptimes")     
+                sendtowebhook(finalstr,finaltimes,has_shmoovin,shmoovin_type)
+                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
         deletemessage()
         delete_html()
     print(f"waiting for {interval} minutes")
