@@ -498,6 +498,12 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 showtimes = False
         except:
             pass
+        try:
+            hasshmoovin = configJson["showshmoovin"]
+            if hasshmoovin.lower() == "false":
+                hasshmoovin = False
+        except:
+            pass
     # checks if full server status should be shown and formats data for it
     if onlyleaderboards.lower() == "false":
         configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
@@ -528,7 +534,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             if verbose:
                 print(f"an exception occured for server {file} {e}")
     # returns correct format based on selected parameters
-    if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
+    if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes :
         if verbose:
             print(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
         data = {"embeds": [
@@ -645,7 +651,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
-    elif onlyleaderboards.lower() == "false" and hasshmoovin and not showtimes:
+    elif onlyleaderboards.lower() == "false" and hasshmoovin  and not showtimes:
         if verbose:
             print(f"posting/updating message with full server info and shmoovin for server {file}")
         data = {"embeds": [
@@ -684,7 +690,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
-    elif onlyleaderboards.lower() == "true" and hasshmoovin and showtimes:
+    elif onlyleaderboards.lower() == "true" and hasshmoovin  and showtimes:
         if verbose:
             print(f"posting/updating message with shmoovin and laptimes for server {file}")
         data = {"embeds": [
@@ -728,7 +734,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
-    elif onlyleaderboards.lower() == "true" and hasshmoovin and not showtimes:
+    elif onlyleaderboards.lower() == "true" and hasshmoovin  and not showtimes:
         if verbose:
             print(f"posting/updating message with shmoovin for server {file}")
         data = {"embeds": [
