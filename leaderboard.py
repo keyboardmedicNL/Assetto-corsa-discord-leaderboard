@@ -158,8 +158,8 @@ def input_find(index_log_line,log_lines,name):
                         print(f"found input method on: {second_input_line.strip()} for server {file}")
                     input_split = second_input_line.split("InputMethod=\"")[1]
                     input_method = input_split.split("\" Rain")[0]
-                    return(input_method)
                     break
+            return(input_method)
         except:
             if verbose:
                 print(f"could not find input method for {str(name)}")
