@@ -29,9 +29,13 @@ def shmoovin_check():
             if scripttype  in overtakescript:
                 shmoovin_type = "Shmoovin overtake leaderboard"
                 has_shmoovin = True
+                if verbose:
+                    print(f"shmoovin type = overtake")
             elif scripttype in driftscript:
                 shmoovin_type = "Shmoovin drift leaderboard"
                 has_shmoovin = True
+                if verbose:
+                    print(f"shmoovin type = drift")
         except:
             pass
     return(has_shmoovin,shmoovin_type)
@@ -46,21 +50,28 @@ def has_classcfg():
             classcfg = configJson["classes"]
         except:
             pass
+    if verbose:
+        print(f"class cfg = {classcfg}")
     return(classcfg)
 
 # checks if server folder contains assettoserver.exe used to filter results
 def server_type_check():
     if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
+        if verbose:
+            print("server type is assettoserver")
         return("assettoserver")
     elif exists(f"{serverspath}\\{file}\\\\acServer.exe"):
+        if verbose:
+            print("server type is acServer")
         return("acserver")
 
 # checks if laptimes file exsists and if not creates it
 def has_score_file_check(file_name):
-    if not exists(f"{serverspath}\\{file}\\{file_name}.txt"):
-        with open(f"{serverspath}\\{file}\\{file_name}.txt", 'w') as score_file:
+    if not exists(f"{serverspath}\\{file}\\{file_name}"):
+        with open(f"{serverspath}\\{file}\\{file_name}", 'w') as score_file:
             score_file.write("")
-            print(f"{file_name} was not found so it was created for server {file}")
+            if verbose:
+                print(f"{file_name} was not found so it was created for server {file}")
 
 
 
@@ -72,7 +83,8 @@ def score_find():
     for index_log_line,log_line in enumerate(log_lines):
         if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
             # formats logline to variables to use for drift entry
-            print(f"found score on: {log_line.strip()} for server {file}")
+            if verbose:
+                print(f"found score on: {log_line.strip()} for server {file}")
             init_split = log_line.split(" Drift:")
             name_array = init_split[0].split("CHAT: ")
             name_no_id = name_array[1].split(" (")[0]
@@ -80,27 +92,45 @@ def score_find():
             score = float(init_split[1])
             input_method = input_find(index_log_line,log_lines,name)
             car = find_car(index_log_line,log_lines,name)
-            write_score(name,score,car,input_method,"leaderboard")
+            write_score(name,score,car,input_method,"leaderboard.txt")
         elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
             # formats logline to variables to use for overtake entry 
-            print(f"found score on: {log_line.strip()} for server {file}")
+            if verbose:
+                print(f"found score on: {log_line.strip()} for server {file}")
             init_split = log_line.split("): just scored a ")
             name_array = init_split[0].split("CHAT: ") 
             name = name_array[1].split(" (")[0]
             score = float(init_split[1])
             input_method = input_find(index_log_line,log_lines,name)
             car = find_car(index_log_line,log_lines,name)
-            write_score(name,score,car,input_method,"leaderboard")
+            write_score(name,score,car,input_method,"leaderboard.txt")
         elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
             # formats logline to variables to use for laptime entry
-            print(f"found laptime on: {log_line.strip()} for server {file}")
+            if verbose:
+                print(f"found laptime on: {log_line.strip()} for server {file}")
             lap_split = log_line.split(" cuts, laptime ")
             name_array = lap_split[0].split("Lap completed by ")
             name = name_array[1].split(",")[0]
             score = float(lap_split[1])
             input_method = input_find(index_log_line,log_lines,name)
             car = find_car(index_log_line,log_lines,name)
-            write_score(name,score,car,input_method,"laptimes")
+            write_score(name,score,car,input_method,"laptimes.txt")
+        elif str(re.search(".* \[DBG\] Stage.*ended.*", log_line)) != "None":
+            # formats logline to variables to use for sector time entry
+            if verbose:
+                print(f"found sector time on: {log_line.strip()} for server {file}")
+            sector_split = log_line.split("Stage ")
+            sector_name_array = sector_split[1].split(" ended for ")
+            sector_name = sector_name_array[0] + "-sector.txt"
+            sector_driver_split = sector_name_array[1].split(" (")
+            name = sector_driver_split[0]
+            sector_time = sector_driver_split[1].split("time: ")[1]
+            minutes,seconds = sector_time.split(":")
+            score = float(float(minutes)*60000)+float(float(seconds)*1000)
+            input_method = input_find(index_log_line,log_lines,name)
+            car = find_car(index_log_line,log_lines,name)
+            has_score_file_check(sector_name)
+            write_score(name,score,car,input_method,sector_name)
 
 # loop to find input method used by whoever got the score
 def input_find(index_log_line,log_lines,name):      
@@ -108,46 +138,53 @@ def input_find(index_log_line,log_lines,name):
     for index_input,input_line in enumerate(reversed(log_lines)):
         if index_input > len(log_lines)-index_log_line and index_input < len(log_lines):
             if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)) != "None" and str(name) in input_line:
-                print(f"found input method on: {input_line.strip()} for server {file}")
+                if verbose:
+                    print(f"found input method on: {input_line.strip()} for server {file}")
                 input_split = input_line.split("InputMethod=\"")[1]
                 input_method = input_split.split("\" Rain")[0]
                 return(input_method)
                 break
     if input_method == "Unknown":
         try:
-            print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
+            if verbose:
+                print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
             with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as second_log_file:
                 loglines_second_last = second_log_file.readlines()
             for second_input_line in reversed(loglines_second_last):
                 if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", second_input_line)) != "None" and str(name) in input_line:
-                    print(f"found input method on: {second_input_line.strip()} for server {file}")
+                    if verbose:
+                        print(f"found input method on: {second_input_line.strip()} for server {file}")
                     input_split = second_input_line.split("InputMethod=\"")[1]
                     input_method = input_split.split("\" Rain")[0]
                     return(input_method)
                     break
         except:
-            print(f"could not find input method for {str(name)}")
+            if verbose:
+                print(f"could not find input method for {str(name)}")
             return(input_method)
 
 # loop to find car driven by whoever got the score
 def find_car(index_log_line,log_lines,name):
-    car = "none"
+    car = "empty"
     for index_car_line,car_line in enumerate(reversed(log_lines)):
         if index_car_line > len(log_lines)-index_log_line and index_car_line < len(log_lines):
             if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
-                print(f"found car on: {car_line.strip()} for server {file}")
+                if verbose:
+                    print(f"found car on: {car_line.strip()} for server {file}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
                 car = car_array[0]
                 return(car)
                 break
-    if car == "none":
-        print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
+    if car == "empty":
+        if verbose:
+            print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
         with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
             loglines_second_last = f.readlines()
         for car_line in reversed(loglines_second_last):
             if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
-                print(f"found car on: {car_line.strip()} for server {file}")
+                if verbose:
+                    print(f"found car on: {car_line.strip()} for server {file}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
                 car = car_array[0]
@@ -156,7 +193,7 @@ def find_car(index_log_line,log_lines,name):
 
 # # writes obtained scores to appropriate file
 def write_score(name,score,car,input_method,file_name):
-    with open(f"{serverspath}\\{file}\\{file_name}.txt", encoding='utf-8', errors='ignore', mode="r+") as score_file:
+    with open(f"{serverspath}\\{file}\\{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
         score_file_lines_new = []
         was_found = False
         score_file_lines = score_file.readlines()
@@ -174,56 +211,63 @@ def write_score(name,score,car,input_method,file_name):
                         entry = f"{car},{name},{score},{input_method}\n"
                         score_file_lines[score_file_lines.index(score_file_line)] = ""
                         score_file_lines_new.append(entry)
-                        print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+                        if verbose:
+                            print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
         if was_found == False:
             entry = f"{car},{name},{score},{input_method}\n"
             score_file_lines_new.append(entry)
-            print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+            if verbose:
+                print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
         score_file.seek(0)
         score_file.truncate()
         score_file.write(''.join(score_file_lines + score_file_lines_new))
 
 # find laptimes for acServer sessions
 def findtimevanilla():
-    latest_file = max(glob.glob(f"{serverspath}\\{file}\\results\\*"), key=os.path.getctime)
-    print(f"results file that is being read is: {latest_file} for server {file}")
-    with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
-        resultsJson = json.load(f)
-    for result in resultsJson["Result"]:
-        name = result["DriverName"]
-        car = result["CarModel"]
-        score = result["BestLap"]
-        if name != "" and score != 999999999:
-             with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
-                    leaderboardlinesnew = []
-                    wasfound = False
-                    leaderboardlines = leaderboard.readlines()
-                    for leaderboardline in leaderboardlines:
-                        # extra logic to avoid issues when manually editing laptimes.txt
-                        if str(leaderboardline) == "\n":
-                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                        if "\n" not in str(leaderboardline):
-                            leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
-                        # actual logic to save laptime to laptimes.txt
-                        if name in leaderboardline and car in leaderboardline:
-                                wasfound = True
-                                leaderboardlineArray = leaderboardline.split(',')
-                                oldscore = leaderboardlineArray[2]
-                                if score < float(oldscore):
-                                    entry = f"{car},{name},{score}\n"
-                                    leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                                    leaderboardlinesnew.append(entry)
-                                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
-                    if wasfound == False:
-                        entry = f"{car},{name},{score}\n"
-                        leaderboardlinesnew.append(entry)
-                        print(f"new laptime for {name} in {car} with time {score} for server {file}")
-                    leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                    leaderboardwrite = ''.join(leaderboardlinescomb)
-                    leaderboard.seek(0)
-                    leaderboard.truncate()
-                    leaderboard.write(leaderboardwrite)
-
+    try:
+        latest_file = max(glob.glob(f"{serverspath}\\{file}\\results\\*"), key=os.path.getctime)
+        if verbose:
+            print(f"results file that is being read is: {latest_file} for server {file}")
+        with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
+            resultsJson = json.load(f)
+        for result in resultsJson["Result"]:
+            name = result["DriverName"]
+            car = result["CarModel"]
+            score = result["BestLap"]
+            if name != "" and score != 999999999:
+                with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                        leaderboardlinesnew = []
+                        wasfound = False
+                        leaderboardlines = leaderboard.readlines()
+                        for leaderboardline in leaderboardlines:
+                            # extra logic to avoid issues when manually editing laptimes.txt
+                            if str(leaderboardline) == "\n":
+                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                            if "\n" not in str(leaderboardline):
+                                leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
+                            # actual logic to save laptime to laptimes.txt
+                            if name in leaderboardline and car in leaderboardline:
+                                    wasfound = True
+                                    leaderboardlineArray = leaderboardline.split(',')
+                                    oldscore = leaderboardlineArray[2]
+                                    if score < float(oldscore):
+                                        entry = f"{car},{name},{score}\n"
+                                        leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                                        leaderboardlinesnew.append(entry)
+                                        if verbose:
+                                            print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                        if wasfound == False:
+                            entry = f"{car},{name},{score}\n"
+                            leaderboardlinesnew.append(entry)
+                            if verbose:
+                                print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                        leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
+                        leaderboardwrite = ''.join(leaderboardlinescomb)
+                        leaderboard.seek(0)
+                        leaderboard.truncate()
+                        leaderboard.write(leaderboardwrite)
+    except Exception as e:
+        print("An exception occurred in find_time_vanilla: ", str(e))
 
 ### sorting and formatting ####
 
@@ -231,15 +275,9 @@ def findtimevanilla():
 def sort_score(score_type,classcfg):
     scores = []
     filtered_times = []
-    with open(f"{serverspath}\\{file}\\{score_type}.txt", 'r', encoding='utf-8', errors='ignore') as score_file:
+    with open(f"{serverspath}\\{file}\\{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
         for line in score_file:
-            if score_type == "laptimes":
-                try:
-                    car, name, score, input_method = line.split(',')
-                except:
-                    car, name, score= line.split(',')
-                    input_method = "Unknown"
-            elif score_type == "leaderboard":
+            if score_type == "leaderboard.txt":
                 try:
                     car, name, score, input_method = line.split(',')
                 except:
@@ -250,12 +288,18 @@ def sort_score(score_type,classcfg):
                         name, score,= line.split(',')
                         input_method = "Unknown"
                         car = "Unknown"
+            else:
+                try:
+                    car, name, score, input_method = line.split(',')
+                except:
+                    car, name, score= line.split(',')
+                    input_method = "Unknown"
             score = score.strip()
             scores.append([car, name, score, input_method])
-    if score_type == "laptimes":
+    if score_type == "leaderboard":
         scores.sort(key=lambda s: float(s[2]), reverse = False)
-    elif score_type == "leaderboard":
-        scores.sort(key=lambda s: float(s[2]), reverse = True)
+    else:
+        scores.sort(key=lambda s: float(s[2]), reverse = False)
     for class_selected in classcfg:
         filtered = []
         for score in scores:
@@ -277,7 +321,7 @@ def sort_score(score_type,classcfg):
                 if not allready_in:
                     filtered.append(score)
         filtered_times.append(filtered)
-    print(f"sorted scores for server {file}")
+    print(f"sorted scores for server {file} with type {score_type}")
     return(filtered_times)
 
 # formats laptimes if class configuration is present to str for use in webhook
@@ -330,7 +374,7 @@ def format_scores(scores,classcfg,doc_type,score_type):
     if finalstr == "":
         finalstr = "currently empty"
         finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
-    print(f"formatted leaderboard for server with multiclass {file}")
+    print(f"formatted scores for server {file} with type {score_type} and destination {doc_type}")
     if doc_type == "discord":
         return(finalstr)
     elif doc_type == "html":
@@ -407,11 +451,13 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 html_lap_times.seek(0)
                 html_lap_times.truncate()
                 html_lap_times.write(times_html)
-                print(f"wrote laptimes to {file}-times.html for server {file}")
+                if verbose:
+                    print(f"wrote laptimes to {file}-times.html for server {file}")
         else:
             with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(times_html)
-                print(f"{file}-times.html was created with laptimes for server {file}")
+                if verbose:
+                    print(f"{file}-times.html was created with laptimes for server {file}")
     if hasshmoovin:
         shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
         if exists (f"html/{file}-shmoovin.html"):
@@ -419,11 +465,13 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 html_lap_times.seek(0)
                 html_lap_times.truncate()
                 html_lap_times.write(shmoovin_html)
-                print(f"wrote shmoovin scores to {file}-shmoovin.html for server {file}")
+                if verbose:
+                    print(f"wrote shmoovin scores to {file}-shmoovin.html for server {file}")
         else:
             with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(shmoovin_html)
-                print(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
+                if verbose:
+                    print(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
@@ -447,7 +495,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
         serverhttp = f"{serveradress}:{httpport}"
         try:
             rl = requests.get(f"http://{serverhttp}/INFO")
-            print(f"server info response is: {rl} for server {file}")
+            if verbose:
+                print(f"server info response is: {rl} for server {file}")
             if "200" in str(rl):
                 rljson = rl.json()
                 clients = rljson["clients"]
@@ -466,10 +515,12 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             maxplayers = "NA"
             clients = "NA"
             track = "NA"
-            print(f"an exception occured for server {file} {e}")
+            if verbose:
+                print(f"an exception occured for server {file} {e}")
     # returns correct format based on selected parameters
     if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes:
-        print(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
+        if verbose:
+            print(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -501,12 +552,17 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         {
                             "name": shmoovin_type,
                             "value": finalstr
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and showtimes:
-        print(f"posting/updating message with full server info and laptimes for server {file}")
+        if verbose:
+            print(f"posting/updating message with full server info and laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -534,12 +590,17 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         {
                             "name": "Laptimes",
                             "value": finaltimes
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and not showtimes:
-        print(f"posting/updating message with full server info for server {file}")
+        if verbose:
+            print(f"posting/updating message with full server info for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -563,12 +624,17 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "Track",
                             "value": track,
                             "inline": "true" 
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and hasshmoovin and not showtimes:
-        print(f"posting/updating message with full server info and shmoovin for server {file}")
+        if verbose:
+            print(f"posting/updating message with full server info and shmoovin for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -596,12 +662,17 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         {
                             "name": shmoovin_type,
                             "value": finalstr
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and hasshmoovin and showtimes:
-        print(f"posting/updating message with shmoovin and laptimes for server {file}")
+        if verbose:
+            print(f"posting/updating message with shmoovin and laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -614,12 +685,17 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         {
                             "name": shmoovin_type,
                             "value": finalstr
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and not hasshmoovin and showtimes:
-        print(f"posting/updating message with laptimes for server {file}")
+        if verbose:
+            print(f"posting/updating message with laptimes for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -628,12 +704,17 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         {
                             "name": "Laptimes",
                             "value": finaltimes
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and hasshmoovin and not showtimes:
-        print(f"posting/updating message with shmoovin for server {file}")
+        if verbose:
+            print(f"posting/updating message with shmoovin for server {file}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -642,6 +723,10 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                         {
                             "name": shmoovin_type,
                             "value": finalstr
+                        },
+                        {
+                            "name": "",
+                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
                     ]
                 }
@@ -650,12 +735,22 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     if exists(f"config/messages/{main_loop_counter}.txt"):
         with open(f"config/messages/{main_loop_counter}.txt") as File:
             messageid = str(File.readline())
-        print(f"{messageid} read from {main_loop_counter}.txt")
+        if verbose:
+            print(f"{messageid} read from {main_loop_counter}.txt")
         rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
         if "200" in str(rl):
             print(f"discord message {messageid} updated")
+        elif "429" in str(rl):
+            for i in range(1,60):
+                print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
+                time.sleep(i)
+                rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
+                if "200" in str(rl):
+                    break
+                if i == 60 and not "200" in str(rl):
+                   print(f"discord message {messageid} could not be updated with status code {rl}") 
         else:
-            print(f"discord message {messageid} could not be updated")
+            print(f"discord message {messageid} could not be updated with status code {rl}") 
     # creates leaderboard message if not allready created
     else:
         rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
@@ -664,14 +759,23 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
         print(f"discord webhook response for method post is {rl} ({messageid} posted)")
         if "200" in str(rl):
             print(f"discord message {messageid} posted")
+        elif "429" in str(rl):
+            for i in range(1,60):
+                print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
+                time.sleep(i)
+                rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
+                if "200" in str(rl):
+                    break
+                if i == 60 and not "200" in str(rl):
+                   print(f"discord message {messageid} could not be posted with status code {rl}") 
         else:
-            print(f"discord message {messageid} could not be posted")
+            print(f"discord message {messageid} could not be posted with status code {rl}")
         if not exists("config/messages"):
             os.mkdir("config/messages")
         with open(f"config/messages/{main_loop_counter}.txt", 'w') as File:
             File.write(f"{messageid}")
-            print(f"{messageid} saved in file {main_loop_counter}.txt")
-    time.sleep(1)
+            if verbose:
+                print(f"{messageid} saved in file {main_loop_counter}.txt")
 
 # deletes unused discord messages
 def deletemessage():
@@ -683,10 +787,20 @@ def deletemessage():
             rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
             if "204" in str(rl):
                 print(f"discord message {message_id} is unused and is now deleted")
+            elif "429" in str(rl):
+                for i in range(1,60):
+                    print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
+                    time.sleep(i)
+                    rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
+                    if "204" in str(rl):
+                        break
+                    if i == 60 and not "204" in str(rl):
+                        print(f"discord message {messageid} could not be deleted with status code {rl}") 
             else:
-                print(f"discord message {message_id} could not be deleted")
+                print(f"discord message {messageid} could not be deleted with status code {rl}") 
             os.remove(f"config/messages/{message}")
-            print(f"removing unused message file {message}")
+            if verbose:
+                print(f"removing unused message file {message}")
 
 # deletes unused html files
 def delete_html():
@@ -698,7 +812,8 @@ def delete_html():
                 html_matches_servername = True
         if not html_matches_servername:
             os.remove(f"html/{html_file}")
-            print(f"remove {html_file} because it is no longer used")
+            if verbose:
+                print(f"remove {html_file} because it is no longer used")
 
 
 
@@ -718,6 +833,11 @@ with open("config/config.json") as config:
     serveradress = configJson["serveradress"]
     serveradressdisplay = configJson["serveradressdisplay"]
     show_input = configJson["show_input"]
+    verbose = configJson["verbose"]
+    if verbose.lower() == "true":
+        verbose = True
+    elif verbose.lower() == "false":
+        verbose = False
     shmoovinurl = driftscript + overtakescript
     print("succesfully loaded config")
 
@@ -731,7 +851,10 @@ while True:
         print(f"list of folders to check: {filenames}")
         for file in filenames:
             # checks if folder is actually a server folder
-            if folderidentifier in file.lower():
+            if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}\\{str(file)}"):
+                has_score_file_check("leaderboard.txt")
+                has_score_file_check("laptimes.txt")
+                print(f"checking server {file}")
                 finalstr = "NA"
                 finalstr_html = "NA"
                 has_shmoovin = False
@@ -741,20 +864,24 @@ while True:
                 classcfg = has_classcfg()
                 if server_type == "assettoserver":
                     sorted_files = sorted(glob.glob(f"{serverspath}\\{file}{logPath}*"), key=os.path.getctime)
-                    print(f"Log file that is being read is: {str(sorted_files[-1])} for server {file}")
+                    if verbose:
+                        print(f"Log file that is being read is: {str(sorted_files[-1])} for server {file}")
                     with open(str(sorted_files[-1]), encoding='utf-8', errors='ignore' "r") as log_file:
                         log_lines = log_file.readlines()
-                    has_score_file_check("laptimes")
                     score_find()
                     has_shmoovin, shmoovin_type = shmoovin_check()
                     if has_shmoovin == True:
-                        has_score_file_check("leaderboard")
-                        scores = sort_score("leaderboard",classcfg)
+                        scores = sort_score("leaderboard.txt",classcfg)
                         finalstr = format_scores(scores,classcfg,"discord","leaderboard")
                         finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
+                    server_files = os.listdir(str(f"{serverspath}\\{file}"))
+                    for files in server_files:
+                        if "-sector" in str(files):
+                            scores = sort_score(files,classcfg)
+                            print(f"{scores} for {files}")
                 elif server_type == "acserver":
                     findtimevanilla()
-                times = sort_score("laptimes",classcfg)
+                times = sort_score("laptimes.txt",classcfg)
                 finaltimes = format_scores(times,classcfg,"discord","laptimes")
                 finaltimes_html = format_scores(times,classcfg,"html","laptimes")     
                 sendtowebhook(finalstr,finaltimes,has_shmoovin,shmoovin_type)
