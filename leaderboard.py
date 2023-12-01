@@ -209,12 +209,20 @@ def write_score(name,score,car,input_method,file_name):
             if name in score_file_line and car in score_file_line:
                     was_found = True
                     old_score = score_file_line.split(',')[2]
-                    if score < float(old_score):
-                        entry = f"{car},{name},{score},{input_method}\n"
-                        score_file_lines[score_file_lines.index(score_file_line)] = ""
-                        score_file_lines_new.append(entry)
-                        if verbose:
-                            print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+                    if file_name == "leaderboard.txt":
+                        if score > float(old_score):
+                            entry = f"{car},{name},{score},{input_method}\n"
+                            score_file_lines[score_file_lines.index(score_file_line)] = ""
+                            score_file_lines_new.append(entry)
+                            if verbose:
+                                print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+                    else:
+                        if score < float(old_score):
+                            entry = f"{car},{name},{score},{input_method}\n"
+                            score_file_lines[score_file_lines.index(score_file_line)] = ""
+                            score_file_lines_new.append(entry)
+                            if verbose:
+                                print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
         if was_found == False:
             entry = f"{car},{name},{score},{input_method}\n"
             score_file_lines_new.append(entry)
@@ -298,8 +306,8 @@ def sort_score(score_type,classcfg):
                     input_method = "Unknown"
             score = score.strip()
             scores.append([car, name, score, input_method])
-    if score_type == "leaderboard":
-        scores.sort(key=lambda s: float(s[2]), reverse = False)
+    if score_type == "leaderboard.txt":
+        scores.sort(key=lambda s: float(s[2]), reverse = True)
     else:
         scores.sort(key=lambda s: float(s[2]), reverse = False)
     for class_selected in classcfg:
