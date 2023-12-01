@@ -7,6 +7,8 @@ from os.path import exists
 import re
 import configparser
 import math
+import datetime
+from datetime import timezone
 
 ##### variables #####
 logPath = "\\logs\\"
@@ -557,7 +559,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and showtimes:
@@ -595,7 +598,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and not showtimes:
@@ -629,7 +633,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     elif onlyleaderboards.lower() == "false" and hasshmoovin and not showtimes:
@@ -667,7 +672,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and hasshmoovin and showtimes:
@@ -690,7 +696,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and not hasshmoovin and showtimes:
@@ -709,7 +716,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     elif onlyleaderboards.lower() == "true" and hasshmoovin and not showtimes:
@@ -728,7 +736,8 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             "name": "",
                             "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
                         }
-                    ]
+                    ],
+                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     # checks if leaderboard message was allready created and updates it
