@@ -885,6 +885,7 @@ while True:
                 main_loop_counter = main_loop_counter+1
                 server_type = server_type_check()
                 classcfg = has_classcfg()
+                final_sector_str = ""
                 if server_type == "assettoserver":
                     sorted_files = sorted(glob.glob(f"{serverspath}\\{file}{logPath}*"), key=os.path.getctime)
                     if verbose:
@@ -898,15 +899,23 @@ while True:
                         finalstr = format_scores(scores,classcfg,"discord","leaderboard")
                         finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
                     server_files = os.listdir(str(f"{serverspath}\\{file}"))
+                    combined_sectors = []
                     for files in server_files:
-                        if "-sector" in str(files):
+                        if "-sector.txt" in str(files):
                             scores = sort_score(files,classcfg)
-                            print(f"{scores} for {files}")
+                            times = format_scores(scores,classcfg,"discord","laptimes")
+                            sector_name = str(files.split("-sector")[0])
+                            combined_sectors.append(f"***Loop: {sector_name}***\n")
+                            combined_sectors.append(times)
+                    final_sector_str = "".join(combined_sectors)
                 elif server_type == "acserver":
                     findtimevanilla()
                 times = sort_score("laptimes.txt",classcfg)
                 finaltimes = format_scores(times,classcfg,"discord","laptimes")
-                finaltimes_html = format_scores(times,classcfg,"html","laptimes")     
+                finaltimes_html = format_scores(times,classcfg,"html","laptimes") 
+                if final_sector_str != "" and "currently empty" in finaltimes.lower():
+                    finaltimes = ""
+                finaltimes = finaltimes + "\n" + final_sector_str 
                 sendtowebhook(finalstr,finaltimes,has_shmoovin,shmoovin_type)
                 sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
         deletemessage()
