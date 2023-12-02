@@ -905,7 +905,7 @@ while True:
                             scores = sort_score(files,classcfg)
                             times = format_scores(scores,classcfg,"discord","laptimes")
                             sector_name = str(files.split("-sector")[0])
-                            combined_sectors.append(f"***Loop: {sector_name}***\n")
+                            combined_sectors.append(f"***{sector_name}***\n")
                             combined_sectors.append(times)
                     final_sector_str = "".join(combined_sectors)
                 elif server_type == "acserver":
