@@ -1,5 +1,5 @@
 # what does it do:
-a server sided script that reads logs from assettoserver and acServer for lap times, shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks.
+a server sided script that reads logs from assettoserver and acServer for lap times, stage times (found on shutoko), shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks.
 
 it makes as many messages as there are servers and will delete them if the server no longer exsists.
 
@@ -12,11 +12,7 @@ laptimes and full server info can be set on or off in the configs as described b
 
 # screenshots
 
-![alt text](screenshot3.png)
-
-![alt text](screenshot4.png)
-
-![alt text](screenshot5.png)
+![alt text](screenshot6.png)
 
 # how to use:
 1. install python on your system from the python website https://www.python.org/downloads/ make sure to select add python to path
@@ -38,6 +34,8 @@ python -m pip install requests
     "serveradress":"ip adress of server",
     "serveradressdisplay":"ip adress used in bot messages and link (incase serveradress is localhost)",
     "onlyleaderboards":"wether or not to show the full server info or leadeboards only, set to "true" or "false" "
+    "show_input": "shows input method used by the driver, "true" or "false"",
+    "verbose": "set script output to verbose for debugging "true" or "false""
 }
 ```
 5. save the file and run the script:   
@@ -60,11 +58,12 @@ docker run -dit --name shmoovin-discord-leaderboard -v /path/to/assetto/servers:
 
 # extra configuration options
 
-* optionally to ignore laptimes or sort by class for a certain server you can create a file in the server root with the name "discordbotcfg.json"
+* optionally to ignore laptimes, shmoovin scores or sort by class for a certain server you can create a file in the server root with the name "discordbotcfg.json"
 in the file add the following lines, an example can be found in the config folder, to define wich car goes in what class make a class entry like above and add the classnames for the car in there within "" seperated by , :
 ```
 {
 "showlaptimes":"True",
+"showshmoovin":"False"
 "classes":{
     "2017":["ks_ferrari_sf70h"],
     "2010":["lotus_exos_125_s1"],
