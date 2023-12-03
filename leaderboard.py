@@ -21,6 +21,8 @@ configp = configparser.ConfigParser(strict=False)
 
 # checks if shmoovin is present in config
 def shmoovin_check():
+    if verbose:
+        print(f"Checking if shmoovin exsists in csp_extra_options.ini for server {file}")
     has_shmoovin = False
     shmoovin_type = ""
     if exists(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini"):
@@ -32,18 +34,20 @@ def shmoovin_check():
                 shmoovin_type = "Shmoovin overtake leaderboard"
                 has_shmoovin = True
                 if verbose:
-                    print(f"shmoovin type = overtake")
+                    print(f"shmoovin was found with the type = overtake")
             elif scripttype in driftscript:
                 shmoovin_type = "Shmoovin drift leaderboard"
                 has_shmoovin = True
                 if verbose:
-                    print(f"shmoovin type = drift")
+                    print(f"shmoovin was found with the type = drift")
         except:
             pass
     return(has_shmoovin,shmoovin_type)
 
 # checks if class config is present and returns it
 def has_classcfg():
+    if verbose:
+        print(f"Checking if classcfg exsists in discordbotcfg.ini for server {file}")
     classcfg = {"none": ["none"]}
     if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
         with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
@@ -58,17 +62,21 @@ def has_classcfg():
 
 # checks if server folder contains assettoserver.exe used to filter results
 def server_type_check():
+    if verbose:
+        print(f"Checking if assettoserver.exe or acServer.exe exsists for server {file}")
     if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
         if verbose:
-            print("server type is assettoserver")
+            print(f"{file} is assettoserver")
         return("assettoserver")
     elif exists(f"{serverspath}\\{file}\\\\acServer.exe"):
         if verbose:
-            print("server type is acServer")
+            print(f"{file} is acServer")
         return("acserver")
 
 # checks if laptimes file exsists and if not creates it
 def has_score_file_check(file_name):
+    if verbose:
+        print(f"Checking if {file_name} exsists for server {file}")
     if not exists(f"{serverspath}\\{file}\\{file_name}"):
         with open(f"{serverspath}\\{file}\\{file_name}", 'w') as score_file:
             score_file.write("")
@@ -82,60 +90,79 @@ def has_score_file_check(file_name):
 
 # opens and loops trough last logfile to find score entries and writes them to the appropriate files
 def score_find():
+    if verbose:
+        print(f"Checking log file for server {file} for score entries")
     for index_log_line,log_line in enumerate(log_lines):
-        if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
-            # formats logline to variables to use for drift entry
-            if verbose:
-                print(f"found score on: {log_line.strip()} for server {file}")
-            init_split = log_line.split(" Drift:")
-            name_array = init_split[0].split("CHAT: ")
-            name_no_id = name_array[1].split(" (")[0]
-            name = name_no_id
-            score = float(init_split[1])
-            input_method = input_find(index_log_line,log_lines,name)
-            car = find_car(index_log_line,log_lines,name)
-            write_score(name,score,car,input_method,"leaderboard.txt")
-        elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
-            # formats logline to variables to use for overtake entry 
-            if verbose:
-                print(f"found score on: {log_line.strip()} for server {file}")
-            init_split = log_line.split("): just scored a ")
-            name_array = init_split[0].split("CHAT: ") 
-            name = name_array[1].split(" (")[0]
-            score = float(init_split[1])
-            input_method = input_find(index_log_line,log_lines,name)
-            car = find_car(index_log_line,log_lines,name)
-            write_score(name,score,car,input_method,"leaderboard.txt")
-        elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
-            # formats logline to variables to use for laptime entry
-            if verbose:
-                print(f"found laptime on: {log_line.strip()} for server {file}")
-            lap_split = log_line.split(" cuts, laptime ")
-            name_array = lap_split[0].split("Lap completed by ")
-            name = name_array[1].split(",")[0]
-            score = float(lap_split[1])
-            input_method = input_find(index_log_line,log_lines,name)
-            car = find_car(index_log_line,log_lines,name)
-            write_score(name,score,car,input_method,"laptimes.txt")
-        elif str(re.search(".* \[DBG\] Stage.*ended.*", log_line)) != "None":
-            # formats logline to variables to use for sector time entry
-            if verbose:
-                print(f"found sector time on: {log_line.strip()} for server {file}")
-            sector_split = log_line.split("Stage ")
-            sector_name_array = sector_split[1].split(" ended for ")
-            sector_name = sector_name_array[0] + "-sector.txt"
-            sector_driver_split = sector_name_array[1].split(" (")
-            name = sector_driver_split[0]
-            sector_time = sector_driver_split[1].split("time: ")[1]
-            minutes,seconds = sector_time.split(":")
-            score = float(float(minutes)*60000)+float(float(seconds)*1000)
-            input_method = input_find(index_log_line,log_lines,name)
-            car = find_car(index_log_line,log_lines,name)
-            has_score_file_check(sector_name)
-            write_score(name,score,car,input_method,sector_name)
+        try:
+            if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
+                # formats logline to variables to use for drift entry
+                if verbose:
+                    print(f"\nfound score on: {log_line.strip()} for server {file}")
+                init_split = log_line.split(" Drift:")
+                name_array = init_split[0].split("CHAT: ")
+                name_no_id = name_array[1].split(" (")[0]
+                name = name_no_id
+                if verbose:
+                    print(f"name = {name}")
+                score = float(init_split[1])
+                if verbose:
+                    print(f"score = {score}")
+                input_method = input_find(index_log_line,log_lines,name)
+                car = find_car(index_log_line,log_lines,name)
+                write_score(name,score,car,input_method,"leaderboard.txt")
+            elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
+                # formats logline to variables to use for overtake entry 
+                if verbose:
+                    print(f"\nfound score on: {log_line.strip()} for server {file}")
+                init_split = log_line.split("): just scored a ")
+                name_array = init_split[0].split("CHAT: ") 
+                name = name_array[1].split(" (")[0]
+                if verbose:
+                    print(f"name = {name}")
+                score = float(init_split[1])
+                if verbose:
+                    print(f"score = {score}")
+                input_method = input_find(index_log_line,log_lines,name)
+                car = find_car(index_log_line,log_lines,name)
+                write_score(name,score,car,input_method,"leaderboard.txt")
+            elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
+                # formats logline to variables to use for laptime entry
+                if verbose:
+                    print(f"\nfound laptime on: {log_line.strip()} for server {file}")
+                lap_split = log_line.split(" cuts, laptime ")
+                name_array = lap_split[0].split("Lap completed by ")
+                name = name_array[1].split(",")[0]
+                if verbose:
+                    print(f"name = {name}")
+                score = float(lap_split[1])
+                if verbose:
+                    print(f"score = {score}")
+                input_method = input_find(index_log_line,log_lines,name)
+                car = find_car(index_log_line,log_lines,name)
+                write_score(name,score,car,input_method,"laptimes.txt")
+            elif str(re.search(".* \[DBG\] Stage.*ended.*", log_line)) != "None":
+                # formats logline to variables to use for sector time entry
+                if verbose:
+                    print(f"\nfound sector time on: {log_line.strip()} for server {file}")
+                sector_split = log_line.split("Stage ")
+                sector_name_array = sector_split[1].split(" ended for ")
+                sector_name = sector_name_array[0] + "-sector.txt"
+                sector_driver_split = sector_name_array[1].split(" (")
+                name = sector_driver_split[0]
+                sector_time = sector_driver_split[1].split("time: ")[1]
+                minutes,seconds = sector_time.split(":")
+                score = float(float(minutes)*60000)+float(float(seconds)*1000)
+                input_method = input_find(index_log_line,log_lines,name)
+                car = find_car(index_log_line,log_lines,name)
+                has_score_file_check(sector_name)
+                write_score(name,score,car,input_method,sector_name)
+        except Exception as e:
+            print("An exception occurred whilst reading logs for scores: ", str(e)) 
 
 # loop to find input method used by whoever got the score
-def input_find(index_log_line,log_lines,name):      
+def input_find(index_log_line,log_lines,name):
+    if verbose:
+        print(f"Checking for input method for found score entry for server {file}")      
     input_method = "Unknown"
     for index_input,input_line in enumerate(reversed(log_lines)):
         if index_input > len(log_lines)-index_log_line and index_input < len(log_lines):
@@ -144,6 +171,8 @@ def input_find(index_log_line,log_lines,name):
                     print(f"found input method on: {input_line.strip()} for server {file}")
                 input_split = input_line.split("InputMethod=\"")[1]
                 input_method = input_split.split("\" Rain")[0]
+                if verbose:
+                    print(f"input_method = {input_method}")
                 return(input_method)
                 break
     if input_method == "Unknown":
@@ -159,6 +188,8 @@ def input_find(index_log_line,log_lines,name):
                     input_split = second_input_line.split("InputMethod=\"")[1]
                     input_method = input_split.split("\" Rain")[0]
                     break
+            if verbose:
+                print(f"input_method = {input_method}")
             return(input_method)
         except:
             if verbose:
@@ -167,6 +198,8 @@ def input_find(index_log_line,log_lines,name):
 
 # loop to find car driven by whoever got the score
 def find_car(index_log_line,log_lines,name):
+    if verbose:
+        print(f"Checking for car for found score entry for server {file}") 
     car = "empty"
     for index_car_line,car_line in enumerate(reversed(log_lines)):
         if index_car_line > len(log_lines)-index_log_line and index_car_line < len(log_lines):
@@ -176,6 +209,8 @@ def find_car(index_log_line,log_lines,name):
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
                 car = car_array[0]
+                if verbose:
+                    print(f"car = {car}")
                 return(car)
                 break
     if car == "empty":
@@ -190,54 +225,65 @@ def find_car(index_log_line,log_lines,name):
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
                 car = car_array[0]
+                if verbose:
+                    print(f"car = {car}")
                 return(car)
                 break
 
 # # writes obtained scores to appropriate file
 def write_score(name,score,car,input_method,file_name):
+    if verbose:
+        print(f"attempting to write found score to {file_name} for server {file}") 
     with open(f"{serverspath}\\{file}\\{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
-        score_file_lines_new = []
-        was_found = False
-        score_file_lines = score_file.readlines()
-        for score_file_line in score_file_lines:
-            # extra logic to avoid issues when manually editing laptimes.txt
-            if str(score_file_line) == "\n":
-                score_file_lines[score_file_lines.index(score_file_line)] = ""
-            if "\n" not in str(score_file_line):
-                score_file_lines[score_file_lines.index(score_file_line)] = score_file_line+"\n"
-            # actual logic to save laptime to laptimes.txt
-            if name in score_file_line and car in score_file_line:
-                    was_found = True
-                    old_score = score_file_line.split(',')[2]
-                    if file_name == "leaderboard.txt":
-                        if score > float(old_score):
-                            entry = f"{car},{name},{score},{input_method}\n"
-                            score_file_lines[score_file_lines.index(score_file_line)] = ""
-                            score_file_lines_new.append(entry)
-                            if verbose:
-                                print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
-                    else:
-                        if score < float(old_score):
-                            entry = f"{car},{name},{score},{input_method}\n"
-                            score_file_lines[score_file_lines.index(score_file_line)] = ""
-                            score_file_lines_new.append(entry)
-                            if verbose:
-                                print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
-        if was_found == False:
-            entry = f"{car},{name},{score},{input_method}\n"
-            score_file_lines_new.append(entry)
+        try:
+            score_file_lines_new = []
+            was_found = False
+            score_file_lines = score_file.readlines()
+            for score_file_line in score_file_lines:
+                # extra logic to avoid issues when manually editing laptimes.txt
+                if str(score_file_line) == "\n":
+                    score_file_lines[score_file_lines.index(score_file_line)] = ""
+                if "\n" not in str(score_file_line):
+                    score_file_lines[score_file_lines.index(score_file_line)] = score_file_line+"\n"
+                # actual logic to save laptime to laptimes.txt
+                if name in score_file_line and car in score_file_line:
+                        was_found = True
+                        old_score = score_file_line.split(',')[2]
+                        if file_name == "leaderboard.txt":
+                            if score > float(old_score):
+                                entry = f"{car},{name},{score},{input_method}\n"
+                                score_file_lines[score_file_lines.index(score_file_line)] = ""
+                                score_file_lines_new.append(entry)
+                                if verbose:
+                                    print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+                        else:
+                            if score < float(old_score):
+                                entry = f"{car},{name},{score},{input_method}\n"
+                                score_file_lines[score_file_lines.index(score_file_line)] = ""
+                                score_file_lines_new.append(entry)
+                                if verbose:
+                                    print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+            if was_found == False:
+                entry = f"{car},{name},{score},{input_method}\n"
+                score_file_lines_new.append(entry)
+                if verbose:
+                    print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
+            score_file.seek(0)
+            score_file.truncate()
+            score_file.write(''.join(score_file_lines + score_file_lines_new))
             if verbose:
-                print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
-        score_file.seek(0)
-        score_file.truncate()
-        score_file.write(''.join(score_file_lines + score_file_lines_new))
+                    print(f"content that was written to {file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
+        except Exception as e:
+            print("An exception occurred whilst trying to write a score to file: ", str(e)) 
 
 # find laptimes for acServer sessions
 def findtimevanilla():
+    if verbose:
+        print(f"Checking for acServer.exe score entries for server{file}") 
     try:
         latest_file = max(glob.glob(f"{serverspath}\\{file}\\results\\*"), key=os.path.getctime)
         if verbose:
-            print(f"results file that is being read is: {latest_file} for server {file}")
+            print(f"results file that is being read is: {latest_file} for server {file}\n")
         with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
             resultsJson = json.load(f)
         for result in resultsJson["Result"]:
@@ -245,6 +291,8 @@ def findtimevanilla():
             car = result["CarModel"]
             score = result["BestLap"]
             if name != "" and score != 999999999:
+                if verbose:
+                    print(f"found laptime for {name} in {car} with time {score}")
                 with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                         leaderboardlinesnew = []
                         wasfound = False
@@ -276,13 +324,18 @@ def findtimevanilla():
                         leaderboard.seek(0)
                         leaderboard.truncate()
                         leaderboard.write(leaderboardwrite)
+                        if verbose:
+                            print(f"content that was written to laptimes.txt = \n{leaderboardwrite}")
     except Exception as e:
-        print("An exception occurred in find_time_vanilla: ", str(e))
+        print("An exception occurred attempting to find scores for a ACServer.exe server: ", str(e))
 
 ### sorting and formatting ####
 
 # sort scores in list per entry within 1 master list
 def sort_score(score_type,classcfg):
+    print("\n")
+    if verbose:
+        print(f"attempting to sort scores with type {score_type} for server {file}") 
     scores = []
     filtered_times = []
     with open(f"{serverspath}\\{file}\\{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
@@ -332,10 +385,15 @@ def sort_score(score_type,classcfg):
                     filtered.append(score)
         filtered_times.append(filtered)
     print(f"sorted scores for server {file} with type {score_type}")
+    if verbose:
+        print(f"filtered times = \n{filtered_times}")
     return(filtered_times)
 
 # formats laptimes if class configuration is present to str for use in webhook
 def format_scores(scores,classcfg,doc_type,score_type):
+    print("\n")
+    if verbose:
+        print(f"attempting to format scores with type {score_type} for output {doc_type} with classcfg {classcfg} for server {file}") 
     finallist = []
     classlist = []
     finallist_html = []
@@ -354,14 +412,14 @@ def format_scores(scores,classcfg,doc_type,score_type):
         for classcore in scores[i]:
             scorecounter = scorecounter + 1
             if scorecounter <= scorelength:
-                if score_type == "laptimes":
+                if score_type == "leaderboard":
+                    score_format = float(classcore[2])
+                else:
                     laptime = float(classcore[2])
                     minutes= math.floor(laptime/(1000*60)%60)
                     laptime = (laptime-(minutes*(1000*60)))
                     seconds = (laptime/1000)
                     score_format = f"{minutes}:{seconds}"
-                elif score_type == "leaderboard":
-                    score_format = float(classcore[2])
                 score_input = classcore[3].strip()
                 if doc_type == "discord":
                     if show_input == "true":
@@ -386,12 +444,18 @@ def format_scores(scores,classcfg,doc_type,score_type):
         finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
     print(f"formatted scores for server {file} with type {score_type} and destination {doc_type}")
     if doc_type == "discord":
+        if verbose:
+            print(f"formatted scores for discord = \n{finalstr}")
         return(finalstr)
     elif doc_type == "html":
+        if verbose:
+            print(f"formatted scores for html = \n{finalstr_html}")
         return(finalstr_html)
            
 # formats and sends to html files for webserver
 def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
+    if verbose:
+        print(f"\nattempting to send formatted scores to html for server {file}") 
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     showtimes = True
@@ -436,6 +500,18 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                             border-color: orange;
                             text-align: right;
                             }
+                        .sectorbox {
+                            width: 320px;
+                            line-height:100%;
+                            padding: 1px;
+                            padding-right: 10px;
+                            margin: 2px;
+                            background-color: #37474f;
+                            color: white;
+                            border-right-style: solid;
+                            border-color: orange;
+                            text-align: right;
+                            }
                         .titlebox {
                             width: 320px;
                             line-height:200%;
@@ -463,11 +539,13 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 html_lap_times.write(times_html)
                 if verbose:
                     print(f"wrote laptimes to {file}-times.html for server {file}")
+                    print(f"html content:\n{times_html}")
         else:
             with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(times_html)
                 if verbose:
                     print(f"{file}-times.html was created with laptimes for server {file}")
+                    print(f"html content:\n{times_html}")
     if hasshmoovin:
         shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
         if exists (f"html/{file}-shmoovin.html"):
@@ -477,14 +555,19 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 html_lap_times.write(shmoovin_html)
                 if verbose:
                     print(f"wrote shmoovin scores to {file}-shmoovin.html for server {file}")
+                    print(f"html content:\n{shmoovin_html}")
         else:
             with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(shmoovin_html)
                 if verbose:
                     print(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
+                    print(f"html content:\n{shmoovin_html}")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
+    print("\n")
+    if verbose:
+        print(f"attempting to send scores to discord for server {file}") 
     configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     # checks if laptimes should be shown
@@ -759,10 +842,11 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
         with open(f"config/messages/{main_loop_counter}.txt") as File:
             messageid = str(File.readline())
         if verbose:
-            print(f"{messageid} read from {main_loop_counter}.txt")
+            print(f"messageid: {messageid} read from {main_loop_counter}.txt")
+            print(f"json data being send to webhook is: \n{data}")
         rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
         if "200" in str(rl):
-            print(f"discord message {messageid} updated")
+            print(f"discord message {messageid} updated\n")
         elif "429" in str(rl):
             for i in range(1,60):
                 print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
@@ -771,17 +855,18 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 if "200" in str(rl):
                     break
                 if i == 60 and not "200" in str(rl):
-                   print(f"discord message {messageid} could not be updated with status code {rl}") 
+                   print(f"discord message {messageid} could not be updated with status code {rl}\n") 
         else:
-            print(f"discord message {messageid} could not be updated with status code {rl}") 
+            print(f"discord message {messageid} could not be updated with status code {rl}\n") 
     # creates leaderboard message if not allready created
     else:
+        if verbose:
+            print(f"json data being send to webhook is: \n{data}")
         rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
         rljson = rl.json()
         messageid = rljson["id"]
-        print(f"discord webhook response for method post is {rl} ({messageid} posted)")
         if "200" in str(rl):
-            print(f"discord message {messageid} posted")
+            print(f"discord message {messageid} posted\n")
         elif "429" in str(rl):
             for i in range(1,60):
                 print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
@@ -790,9 +875,9 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 if "200" in str(rl):
                     break
                 if i == 60 and not "200" in str(rl):
-                   print(f"discord message {messageid} could not be posted with status code {rl}") 
+                   print(f"discord message {messageid} could not be posted with status code {rl}\n") 
         else:
-            print(f"discord message {messageid} could not be posted with status code {rl}")
+            print(f"discord message {messageid} could not be posted with status code {rl}\n")
         if not exists("config/messages"):
             os.mkdir("config/messages")
         with open(f"config/messages/{main_loop_counter}.txt", 'w') as File:
@@ -802,6 +887,9 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
 
 # deletes unused discord messages
 def deletemessage():
+    print("\n")
+    if verbose:
+        print(f"checking if messages need to be deleted if unused") 
     message_lst= os.listdir("config/messages")
     for index,message in enumerate(message_lst):
         if index > main_loop_counter:
@@ -827,6 +915,9 @@ def deletemessage():
 
 # deletes unused html files
 def delete_html():
+    print("\n")
+    if verbose:
+        print(f"checking if html files need to be deleted if unused")
     html_files = os.listdir("html")
     for html_file in html_files:
         html_matches_servername = False
@@ -862,22 +953,22 @@ with open("config/config.json") as config:
     elif verbose.lower() == "false":
         verbose = False
     shmoovinurl = driftscript + overtakescript
-    print("succesfully loaded config")
+    print("succesfully loaded config\n")
 
 # main loop 
-print("starting main loop")
+print("starting main loop\n")
 while True:
     # loop trough folders in server folder
     main_loop_counter = -1
     for serverspath in serverspathlst:
         filenames= os.listdir(str(serverspath))
-        print(f"list of folders to check: {filenames}")
+        print(f"list of folders to check:{filenames}")
         for file in filenames:
             # checks if folder is actually a server folder
             if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}\\{str(file)}"):
+                print(f"\nchecking server {file}")
                 has_score_file_check("leaderboard.txt")
                 has_score_file_check("laptimes.txt")
-                print(f"checking server {file}")
                 finalstr = "NA"
                 finalstr_html = "NA"
                 has_shmoovin = False
@@ -886,6 +977,7 @@ while True:
                 server_type = server_type_check()
                 classcfg = has_classcfg()
                 final_sector_str = ""
+                final_sector_str_html = ""
                 if server_type == "assettoserver":
                     sorted_files = sorted(glob.glob(f"{serverspath}\\{file}{logPath}*"), key=os.path.getctime)
                     if verbose:
@@ -900,14 +992,19 @@ while True:
                         finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
                     server_files = os.listdir(str(f"{serverspath}\\{file}"))
                     combined_sectors = []
+                    combined_sectors_html = []
                     for files in server_files:
                         if "-sector.txt" in str(files):
                             scores = sort_score(files,classcfg)
-                            times = format_scores(scores,classcfg,"discord","laptimes")
+                            times = format_scores(scores,classcfg,"discord",str(files))
+                            times_html = format_scores(scores,classcfg,"html",str(files))
                             sector_name = str(files.split("-sector")[0])
                             combined_sectors.append(f"***{sector_name}***\n")
                             combined_sectors.append(times)
+                            combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
+                            combined_sectors_html.append(times_html)
                     final_sector_str = "".join(combined_sectors)
+                    final_sector_str_html = "".join(combined_sectors_html)
                 elif server_type == "acserver":
                     findtimevanilla()
                 times = sort_score("laptimes.txt",classcfg)
@@ -915,10 +1012,13 @@ while True:
                 finaltimes_html = format_scores(times,classcfg,"html","laptimes") 
                 if final_sector_str != "" and "currently empty" in finaltimes.lower():
                     finaltimes = ""
+                if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
+                    finaltimes_html = ""
                 finaltimes = finaltimes + "\n" + final_sector_str 
+                finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
                 sendtowebhook(finalstr,finaltimes,has_shmoovin,shmoovin_type)
                 sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
         deletemessage()
         delete_html()
-    print(f"waiting for {interval} minutes")
+    print(f"\nwaiting for {interval} minutes\n")
     time.sleep(interval*60)
