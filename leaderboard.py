@@ -11,7 +11,7 @@ import datetime
 from datetime import timezone
 
 ##### variables #####
-logPath = "\\logs\\"
+logPath = "/logs/"
 configp = configparser.ConfigParser(strict=False)
 
 ##### functions #####
@@ -25,9 +25,9 @@ def shmoovin_check():
         print(f"Checking if shmoovin exsists in csp_extra_options.ini for server {file}")
     has_shmoovin = False
     shmoovin_type = ""
-    if exists(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini"):
+    if exists(f"{serverspath}/{file}/cfg/csp_extra_options.ini"):
         try:
-            configp.read(f"{serverspath}\\{file}\\cfg\\csp_extra_options.ini")
+            configp.read(f"{serverspath}/{file}/cfg/csp_extra_options.ini")
             scripttype = str(configp['SCRIPT_...']['SCRIPT'])
             scripttype = scripttype.replace("'","")
             if scripttype  in overtakescript:
@@ -49,8 +49,8 @@ def has_classcfg():
     if verbose:
         print(f"Checking if classcfg exsists in discordbotcfg.ini for server {file}")
     classcfg = {"none": ["none"]}
-    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
-        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
+    if exists(f"{serverspath}/{file}//discordbotcfg.json"):
+        with open(f"{serverspath}/{file}//discordbotcfg.json") as config:
             configJson = json.load(config)
         try:
             classcfg = configJson["classes"]
@@ -64,11 +64,11 @@ def has_classcfg():
 def server_type_check():
     if verbose:
         print(f"Checking if assettoserver.exe or acServer.exe exsists for server {file}")
-    if exists(f"{serverspath}\\{file}\\\\assettoserver.exe"):
+    if exists(f"{serverspath}/{file}//assettoserver.exe"):
         if verbose:
             print(f"{file} is assettoserver")
         return("assettoserver")
-    elif exists(f"{serverspath}\\{file}\\\\acServer.exe"):
+    elif exists(f"{serverspath}/{file}//acServer.exe"):
         if verbose:
             print(f"{file} is acServer")
         return("acserver")
@@ -77,8 +77,8 @@ def server_type_check():
 def has_score_file_check(file_name):
     if verbose:
         print(f"Checking if {file_name} exsists for server {file}")
-    if not exists(f"{serverspath}\\{file}\\{file_name}"):
-        with open(f"{serverspath}\\{file}\\{file_name}", 'w') as score_file:
+    if not exists(f"{serverspath}/{file}/{file_name}"):
+        with open(f"{serverspath}/{file}/{file_name}", 'w') as score_file:
             score_file.write("")
             if verbose:
                 print(f"{file_name} was not found so it was created for server {file}")
@@ -234,7 +234,7 @@ def find_car(index_log_line,log_lines,name):
 def write_score(name,score,car,input_method,file_name):
     if verbose:
         print(f"attempting to write found score to {file_name} for server {file}") 
-    with open(f"{serverspath}\\{file}\\{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
+    with open(f"{serverspath}/{file}/{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
         try:
             score_file_lines_new = []
             was_found = False
@@ -281,7 +281,7 @@ def findtimevanilla():
     if verbose:
         print(f"Checking for acServer.exe score entries for server{file}") 
     try:
-        latest_file = max(glob.glob(f"{serverspath}\\{file}\\results\\*"), key=os.path.getctime)
+        latest_file = max(glob.glob(f"{serverspath}/{file}/results/*"), key=os.path.getctime)
         if verbose:
             print(f"results file that is being read is: {latest_file} for server {file}\n")
         with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
@@ -293,7 +293,7 @@ def findtimevanilla():
             if name != "" and score != 999999999:
                 if verbose:
                     print(f"found laptime for {name} in {car} with time {score}")
-                with open(f"{serverspath}\\{file}\\laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                with open(f"{serverspath}/{file}/laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                         leaderboardlinesnew = []
                         wasfound = False
                         leaderboardlines = leaderboard.readlines()
@@ -338,7 +338,7 @@ def sort_score(score_type,classcfg):
         print(f"attempting to sort scores with type {score_type} for server {file}") 
     scores = []
     filtered_times = []
-    with open(f"{serverspath}\\{file}\\{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
+    with open(f"{serverspath}/{file}/{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
         for line in score_file:
             if score_type == "leaderboard.txt":
                 try:
@@ -373,12 +373,12 @@ def sort_score(score_type,classcfg):
                 for index_entry,entry in enumerate(filtered):
                     if str(score[1]) in str(entry):
                         allready_in = True
-                        if score_type == "laptimes":
-                            if float(score[2]) < float(entry[2]):
+                        if score_type == "leaderboard.txt":
+                            if float(score[2]) > float(entry[2]):
                                 del filtered[index_entry]
                                 filtered.append(score)
-                        elif score_type == "leaderboard":
-                            if float(score[2]) > float(entry[2]):
+                        else:
+                            if float(score[2]) < float(entry[2]):
                                 del filtered[index_entry]
                                 filtered.append(score)
                 if not allready_in:
@@ -456,11 +456,11 @@ def format_scores(scores,classcfg,doc_type,score_type):
 def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     if verbose:
         print(f"\nattempting to send formatted scores to html for server {file}") 
-    configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
+    configp.read(f"{serverspath}/{file}/cfg/server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     showtimes = True
-    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
-        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
+    if exists(f"{serverspath}/{file}//discordbotcfg.json"):
+        with open(f"{serverspath}/{file}//discordbotcfg.json") as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
@@ -470,65 +470,67 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             pass
     if not exists("html"):
         os.mkdir("html")
-    pre_html = ("""<html>
-                        <head>
-                        <style>
-                        body {
-                            font-family: verdana; 
-                            }
-                        .namebox {
-                            width: 320px;
-                            line-height:1%;
-                            padding: 1px;
-                            padding-right: 10px;
-                            margin: 2px;
-                            background-color: #000000;
-                            color: white;
-                            border-right-style: solid;
-                            border-color: orange;
-                            text-align: right;
-                            }
-                        .classbox {
-                            width: 320px;
-                            line-height:100%;
-                            padding: 1px;
-                            padding-right: 10px;
-                            margin: 2px;
-                            background-color: orange;
-                            color: white;
-                            border-right-style: solid;
-                            border-color: orange;
-                            text-align: right;
-                            }
-                        .sectorbox {
-                            width: 320px;
-                            line-height:100%;
-                            padding: 1px;
-                            padding-right: 10px;
-                            margin: 2px;
-                            background-color: #37474f;
-                            color: white;
-                            border-right-style: solid;
-                            border-color: orange;
-                            text-align: right;
-                            }
-                        .titlebox {
-                            width: 320px;
-                            line-height:200%;
-                            padding: 1px;
-                            padding-right: 10px;
-                            margin: 2px;
-                            background-color: black;
-                            color: white;
-                            border-right-style: solid;
-                            border-color: orange;
-                            word-wrap: break-word;
-                            text-align: right;
-                            }
-                        </style>
-                        </head>
-                        <body>
-                        <div class="titlebox">""")
+    pre_html = ("""
+<html>
+<head>
+<style>
+body {
+    font-family: verdana; 
+    }
+.namebox {
+    width: 320px;
+    line-height:1%;
+    padding: 1px;
+    padding-right: 10px;
+    margin: 2px;
+    background-color: #000000;
+    color: white;
+    border-right-style: solid;
+    border-color: orange;
+    text-align: right;
+    }
+.classbox {
+    width: 320px;
+    line-height:100%;
+    padding: 1px;
+    padding-right: 10px;
+    margin: 2px;
+    background-color: orange;
+    color: white;
+    border-right-style: solid;
+    border-color: orange;
+    text-align: right;
+    }
+.sectorbox {
+    width: 320px;
+    line-height:100%;
+    padding: 1px;
+    padding-right: 10px;
+    margin: 2px;
+    background-color: #37474f;
+    color: white;
+    border-right-style: solid;
+    border-color: orange;
+    text-align: right;
+    }
+.titlebox {
+    width: 320px;
+    line-height:200%;
+    padding: 1px;
+    padding-right: 10px;
+    margin: 2px;
+    background-color: black;
+    color: white;
+    border-right-style: solid;
+    border-color: orange;
+    word-wrap: break-word;
+    text-align: right;
+    }
+</style>
+</head>
+<body>
+<div class="titlebox">
+""")
     refresh_script = "<script>setTimeout(function(){location.reload()},10000);</script>"
     if showtimes:
         times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
@@ -539,13 +541,13 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 html_lap_times.write(times_html)
                 if verbose:
                     print(f"wrote laptimes to {file}-times.html for server {file}")
-                    print(f"html content:\n{times_html}")
+                    print(f"html content:\n{times_html}\n")
         else:
             with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(times_html)
                 if verbose:
                     print(f"{file}-times.html was created with laptimes for server {file}")
-                    print(f"html content:\n{times_html}")
+                    print(f"html content:\n{times_html}\n")
     if hasshmoovin:
         shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
         if exists (f"html/{file}-shmoovin.html"):
@@ -555,25 +557,25 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 html_lap_times.write(shmoovin_html)
                 if verbose:
                     print(f"wrote shmoovin scores to {file}-shmoovin.html for server {file}")
-                    print(f"html content:\n{shmoovin_html}")
+                    print(f"html content:\n{shmoovin_html}\n")
         else:
             with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(shmoovin_html)
                 if verbose:
                     print(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
-                    print(f"html content:\n{shmoovin_html}")
+                    print(f"html content:\n{shmoovin_html}\n")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     print("\n")
     if verbose:
         print(f"attempting to send scores to discord for server {file}") 
-    configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
+    configp.read(f"{serverspath}/{file}/cfg/server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
-    # checks if laptimes should be shown
+    # checks if laptimes and shmoovin score should be shown
     showtimes = True
-    if exists(f"{serverspath}\\{file}\\\\discordbotcfg.json"):
-        with open(f"{serverspath}\\{file}\\\\discordbotcfg.json") as config:
+    if exists(f"{serverspath}/{file}//discordbotcfg.json"):
+        with open(f"{serverspath}/{file}//discordbotcfg.json") as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
@@ -589,7 +591,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             pass
     # checks if full server status should be shown and formats data for it
     if onlyleaderboards.lower() == "false":
-        configp.read(f"{serverspath}\\{file}\\cfg\\server_cfg.ini")
+        configp.read(f"{serverspath}/{file}/cfg/server_cfg.ini")
         httpport = str(configp['SERVER']['HTTP_PORT'])
         serverhttp = f"{serveradress}:{httpport}"
         try:
@@ -843,7 +845,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             messageid = str(File.readline())
         if verbose:
             print(f"messageid: {messageid} read from {main_loop_counter}.txt")
-            print(f"json data being send to webhook is: \n{data}")
+            print(f"json data being send to webhook is: \n{data}\n")
         rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
         if "200" in str(rl):
             print(f"discord message {messageid} updated\n")
@@ -861,7 +863,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     # creates leaderboard message if not allready created
     else:
         if verbose:
-            print(f"json data being send to webhook is: \n{data}")
+            print(f"json data being send to webhook is: \n{data}\n")
         rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
         rljson = rl.json()
         messageid = rljson["id"]
@@ -965,7 +967,7 @@ while True:
         print(f"list of folders to check:{filenames}")
         for file in filenames:
             # checks if folder is actually a server folder
-            if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}\\{str(file)}"):
+            if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}/{str(file)}"):
                 print(f"\nchecking server {file}")
                 has_score_file_check("leaderboard.txt")
                 has_score_file_check("laptimes.txt")
@@ -979,7 +981,7 @@ while True:
                 final_sector_str = ""
                 final_sector_str_html = ""
                 if server_type == "assettoserver":
-                    sorted_files = sorted(glob.glob(f"{serverspath}\\{file}{logPath}*"), key=os.path.getctime)
+                    sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime)
                     if verbose:
                         print(f"Log file that is being read is: {str(sorted_files[-1])} for server {file}")
                     with open(str(sorted_files[-1]), encoding='utf-8', errors='ignore' "r") as log_file:
@@ -990,7 +992,7 @@ while True:
                         scores = sort_score("leaderboard.txt",classcfg)
                         finalstr = format_scores(scores,classcfg,"discord","leaderboard")
                         finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
-                    server_files = os.listdir(str(f"{serverspath}\\{file}"))
+                    server_files = os.listdir(str(f"{serverspath}/{file}"))
                     combined_sectors = []
                     combined_sectors_html = []
                     for files in server_files:
