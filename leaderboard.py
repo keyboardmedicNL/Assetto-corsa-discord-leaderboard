@@ -422,12 +422,12 @@ def format_scores(scores,classcfg,doc_type,score_type):
                     score_format = f"{minutes}:{seconds}"
                 score_input = classcore[3].strip()
                 if doc_type == "discord":
-                    if show_input == "true":
+                    if show_input == "true" and server_type != "acserver":
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
                     else:
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
                 elif doc_type == "html":
-                    if show_input == "true":
+                    if show_input == "true" and server_type != "acserver":
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
                         short_name = str(classcore[1])[0:8]
                         html_score_format = f"<b>{short_name}</b> - {score_input} - {score_format}"
