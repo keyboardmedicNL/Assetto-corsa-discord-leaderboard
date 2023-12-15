@@ -9,6 +9,7 @@ import configparser
 import math
 import datetime
 from datetime import timezone
+import sys
 
 ##### variables #####
 logPath = "/logs/"
@@ -968,12 +969,25 @@ with open("config/config.json") as config:
     serveradressdisplay = configJson["serveradressdisplay"]
     show_input = configJson["show_input"]
     verbose = configJson["verbose"]
+    log_to_file = configJson["log_to_file"]
     if verbose.lower() == "true":
         verbose = True
     elif verbose.lower() == "false":
         verbose = False
     shmoovinurl = driftscript + overtakescript
     print("succesfully loaded config\n")
+
+#logic for logging to file
+if log_to_file.lower() == "true":
+    class Tee:
+        def write(self, *args, **kwargs):
+            self.out1.write(*args, **kwargs)
+            self.out2.write(*args, **kwargs)
+        def __init__(self, out1, out2):
+            self.out1 = out1
+            self.out2 = out2
+
+    sys.stdout = Tee(open("log.txt", "w"), sys.stdout)
 
 # main loop 
 print("starting main loop\n")
@@ -1024,7 +1038,7 @@ while True:
                 finaltimes_combined = finaltimes + "\n" + final_sector_str
                 while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:
                     leaderboardlimit = leaderboardlimit - 1
-                    print(f"data to send to discord is too big, limiting number of entries to {leaderboardlimit}")
+                    print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit}\n")
                     finaltimes = format_scores(times,classcfg,"discord","laptimes")
                     final_sector_str,final_sector_str_html = format_sector()
                     finaltimes_combined = finaltimes + "\n" + final_sector_str

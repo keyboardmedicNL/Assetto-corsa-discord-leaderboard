@@ -10,5 +10,6 @@
     "serveradressdisplay":"127.0.0.1",
     "onlyleaderboards":"false",
     "show_input": "true",
-    "verbose": "false"
+    "verbose": "false",
+    "log_to_file": "true"
 }

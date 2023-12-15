@@ -36,6 +36,7 @@ python -m pip install requests
     "onlyleaderboards":"wether or not to show the full server info or leadeboards only, set to "true" or "false" "
     "show_input": "shows input method used by the driver, "true" or "false"",
     "verbose": "set script output to verbose for debugging "true" or "false""
+    "log_to_file": "logs all output to a file for debugging "true" or "false" WARNING does not limit filesize yet"
 }
 ```
 5. save the file and run the script:   
