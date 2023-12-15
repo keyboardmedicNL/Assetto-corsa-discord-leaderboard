@@ -404,7 +404,7 @@ def format_scores(scores,classcfg,doc_type,score_type):
         scorecounter = 0
         if scorelength > 0:
             if doc_type == "discord" and str(classlist[i]) != "none":
-                finallist.append(f"\n***class: {str(classlist[i])}***:\n")
+                finallist.append(f"***class: {str(classlist[i])}***:\n")
             elif doc_type == "html" and str(classlist[i]) != "none":
                 finallist_html.append(f"\n<div class=\"classbox\">\n<h3>class: {str(classlist[i])}</h3>\n</div>\n")
         if scorelength >= leaderboardlimit:
@@ -451,7 +451,25 @@ def format_scores(scores,classcfg,doc_type,score_type):
         if verbose:
             print(f"formatted scores for html = \n{finalstr_html}")
         return(finalstr_html)
-           
+
+def format_sector():  
+    server_files = os.listdir(str(f"{serverspath}/{file}"))
+    combined_sectors = []
+    combined_sectors_html = []
+    for files in server_files:
+        if "-sector.txt" in str(files):
+            scores = sort_score(files,classcfg)
+            times = format_scores(scores,classcfg,"discord",str(files))
+            times_html = format_scores(scores,classcfg,"html",str(files))
+            sector_name = str(files.split("-sector")[0])
+            combined_sectors.append(f"\n**{sector_name}**\n")
+            combined_sectors.append(times)
+            combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
+            combined_sectors_html.append(times_html)
+    final_sector_str = "".join(combined_sectors)
+    final_sector_str_html = "".join(combined_sectors_html)
+    return(final_sector_str,final_sector_str_html)
+
 # formats and sends to html files for webserver
 def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     if verbose:
@@ -942,7 +960,7 @@ with open("config/config.json") as config:
     serverspathlst = configJson["serverspath"]
     webhookurl = configJson["webhookurl"]
     folderidentifier = configJson["folderindentifier"]
-    leaderboardlimit = configJson["leaderboardlimit"]
+    leaderboardlimit = int(configJson["leaderboardlimit"])
     driftscript = configJson["shmoovindrifturl"]
     overtakescript = configJson["shmoovinovertakeurl"]
     onlyleaderboards = configJson["onlyleaderboards"]
@@ -966,6 +984,7 @@ while True:
         filenames= os.listdir(str(serverspath))
         print(f"list of folders to check:{filenames}")
         for file in filenames:
+            leaderboardlimit = int(configJson["leaderboardlimit"])
             # checks if folder is actually a server folder
             if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}/{str(file)}"):
                 print(f"\nchecking server {file}")
@@ -992,21 +1011,7 @@ while True:
                         scores = sort_score("leaderboard.txt",classcfg)
                         finalstr = format_scores(scores,classcfg,"discord","leaderboard")
                         finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
-                    server_files = os.listdir(str(f"{serverspath}/{file}"))
-                    combined_sectors = []
-                    combined_sectors_html = []
-                    for files in server_files:
-                        if "-sector.txt" in str(files):
-                            scores = sort_score(files,classcfg)
-                            times = format_scores(scores,classcfg,"discord",str(files))
-                            times_html = format_scores(scores,classcfg,"html",str(files))
-                            sector_name = str(files.split("-sector")[0])
-                            combined_sectors.append(f"***{sector_name}***\n")
-                            combined_sectors.append(times)
-                            combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
-                            combined_sectors_html.append(times_html)
-                    final_sector_str = "".join(combined_sectors)
-                    final_sector_str_html = "".join(combined_sectors_html)
+                    final_sector_str,final_sector_str_html = format_sector()
                 elif server_type == "acserver":
                     findtimevanilla()
                 times = sort_score("laptimes.txt",classcfg)
@@ -1016,9 +1021,17 @@ while True:
                     finaltimes = ""
                 if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
                     finaltimes_html = ""
-                finaltimes = finaltimes + "\n" + final_sector_str 
+                finaltimes_combined = finaltimes + "\n" + final_sector_str
+                while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:
+                    leaderboardlimit = leaderboardlimit - 1
+                    print(f"data to send to discord is too big, limiting number of entries to {leaderboardlimit}")
+                    finaltimes = format_scores(times,classcfg,"discord","laptimes")
+                    final_sector_str,final_sector_str_html = format_sector()
+                    finaltimes_combined = finaltimes + "\n" + final_sector_str
+                    if has_shmoovin == True:
+                        finalstr = format_scores(scores,classcfg,"discord","leaderboard")
                 finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
-                sendtowebhook(finalstr,finaltimes,has_shmoovin,shmoovin_type)
+                sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
                 sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
         deletemessage()
         delete_html()
