@@ -1,5 +1,5 @@
 # what does it do:
-a server sided script that reads logs from assettoserver and acServer for lap times, stage times (found on shutoko), shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks.
+a server sided script that reads logs from assettoserver and acServer for lap times, stage times (found on shutoko), shmoovin score entries and general server information and posts them to a leaderboard posted via discord webhooks aswell as html files in a html folder to use as live overlays in obs.
 
 it makes as many messages as there are servers and will delete them if the server no longer exsists.
 
@@ -15,6 +15,8 @@ laptimes and full server info can be set on or off in the configs as described b
 # screenshots
 
 ![alt text](screenshot6.png)
+
+![alt text](screenshot7.png)
 
 # how to use:
 1. install python on your system from the python website https://www.python.org/downloads/ make sure to select add python to path

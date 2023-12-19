@@ -11,5 +11,5 @@
     "onlyleaderboards":"false",
     "show_input": "true",
     "verbose": "false",
-    "log_to_file": "true"
+    "log_to_file": "false"
 }
