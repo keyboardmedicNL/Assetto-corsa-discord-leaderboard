@@ -8,6 +8,8 @@ it loops trough a parent folder housing all servers and uses a configurable iden
 If there is no shmoovin script present in the csp config in the server folders cfg folder it will not trigger and leave the folder alone.
 It gets the server name from the server config.
 
+if there are too much characters in the discord message the bot will limit the amount of entries until it fits.
+
 laptimes and full server info can be set on or off in the configs as described below.
 
 # screenshots
