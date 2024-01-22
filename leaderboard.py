@@ -28,7 +28,7 @@ def shmoovin_check():
     shmoovin_type = ""
     if exists(f"{serverspath}/{file}/cfg/csp_extra_options.ini"):
         try:
-            configp.read(f"{serverspath}/{file}/cfg/csp_extra_options.ini")
+            configp.read(f"{serverspath}/{file}/cfg/csp_extra_options.ini", encoding='utf-8')
             scripttype = str(configp['SCRIPT_...']['SCRIPT'])
             scripttype = scripttype.replace("'","")
             if scripttype  in overtakescript:
@@ -41,8 +41,8 @@ def shmoovin_check():
                 has_shmoovin = True
                 if verbose:
                     print(f"shmoovin was found with the type = drift")
-        except:
-            pass
+        except Exception as e:
+            print("An exception occurred: ", str(e))
     return(has_shmoovin,shmoovin_type)
 
 # checks if class config is present and returns it
