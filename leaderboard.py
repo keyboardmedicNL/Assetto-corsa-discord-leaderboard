@@ -353,15 +353,15 @@ def findtimevanilla():
 def check_name(name_to_check):
     if verbose:
         print(f"checking {name_to_check} to see if it matches any banned words")
-        print(f"list of banned words to check against: {banned_words}")
+        print(f"list of banned words to check against:\n{banned_words}")
     allowed = True
     for banned_word in banned_words:
         if banned_word.lower() in name_to_check.lower():
             allowed = False
             if verbose:
-                print(f"Found banned word: {banned_word} in the name: {name_to_check}")
+                print(f"Found banned word: {banned_word} in the name: {name_to_check}\n")
     if verbose and allowed:
-        print(f"{name_to_check} does not match any banned words")
+        print(f"{name_to_check} does not match any banned words\n")
     return(allowed)
 
 # sort scores in list per entry within 1 master list
