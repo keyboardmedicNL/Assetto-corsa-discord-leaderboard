@@ -11,5 +11,6 @@
     "onlyleaderboards":"false",
     "show_input": "true",
     "verbose": "false",
-    "log_to_file": "false"
+    "log_to_file": "false",
+    "banned_words":["penis","vagina","retard"]
 }
