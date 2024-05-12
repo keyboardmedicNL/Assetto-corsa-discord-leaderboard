@@ -102,7 +102,8 @@ def score_find():
                 init_split = log_line.split(" Drift:")
                 name_array = init_split[0].split("CHAT: ")
                 name_no_id = name_array[1].split(" (")[0]
-                name = name_no_id
+                name_clean = name_no_id.replace(',','')
+                name = name_clean
                 if verbose:
                     print(f"name = {name}")
                 score = float(init_split[1])
@@ -209,7 +210,8 @@ def find_car(index_log_line,log_lines,name):
                     print(f"found car on: {car_line.strip()} for server {file}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
-                car = car_array[0]
+                car_seperated = car_array[0]
+                car = car_seperated.replace(',','')
                 if verbose:
                     print(f"car = {car}")
                 return(car)
@@ -225,7 +227,8 @@ def find_car(index_log_line,log_lines,name):
                     print(f"found car on: {car_line.strip()} for server {file}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
-                car = car_array[0]
+                car_seperated = car_array[0]
+                car = car_seperated.replace(',','')
                 if verbose:
                     print(f"car = {car}")
                 return(car)
