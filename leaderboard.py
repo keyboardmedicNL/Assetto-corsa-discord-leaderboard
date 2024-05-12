@@ -303,45 +303,47 @@ def findtimevanilla():
         for result in resultsJson["Result"]:
             name_seperated = result["DriverName"]
             name = name_seperated.replace(',','')
-            car_seperated = result["CarModel"]
-            car = car_seperated.replace(',','')
-            score = result["BestLap"]
-            if name != "" and score != 999999999:
-                if verbose:
-                    print(f"found laptime for {name} in {car} with time {score}")
-                with open(f"{serverspath}/{file}/laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
-                        leaderboardlinesnew = []
-                        wasfound = False
-                        leaderboardlines = leaderboard.readlines()
-                        for leaderboardline in leaderboardlines:
-                            # extra logic to avoid issues when manually editing laptimes.txt
-                            if str(leaderboardline) == "\n":
-                                leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                            if "\n" not in str(leaderboardline):
-                                leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
-                            # actual logic to save laptime to laptimes.txt
-                            if name in leaderboardline and car in leaderboardline:
-                                    wasfound = True
-                                    leaderboardlineArray = leaderboardline.split(',')
-                                    oldscore = leaderboardlineArray[2]
-                                    if score < float(oldscore):
-                                        entry = f"{car},{name},{score}\n"
-                                        leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
-                                        leaderboardlinesnew.append(entry)
-                                        if verbose:
-                                            print(f"new laptime for {name} in {car} with time {score} for server {file}")
-                        if wasfound == False:
-                            entry = f"{car},{name},{score}\n"
-                            leaderboardlinesnew.append(entry)
+            name_allowed_vanilla = check_name(name)
+            if name_allowed_vanilla:
+                car_seperated = result["CarModel"]
+                car = car_seperated.replace(',','')
+                score = result["BestLap"]
+                if name != "" and score != 999999999:
+                    if verbose:
+                        print(f"found laptime for {name} in {car} with time {score}")
+                    with open(f"{serverspath}/{file}/laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                            leaderboardlinesnew = []
+                            wasfound = False
+                            leaderboardlines = leaderboard.readlines()
+                            for leaderboardline in leaderboardlines:
+                                # extra logic to avoid issues when manually editing laptimes.txt
+                                if str(leaderboardline) == "\n":
+                                    leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                                if "\n" not in str(leaderboardline):
+                                    leaderboardlines[leaderboardlines.index(leaderboardline)] = leaderboardline+"\n"
+                                # actual logic to save laptime to laptimes.txt
+                                if name in leaderboardline and car in leaderboardline:
+                                        wasfound = True
+                                        leaderboardlineArray = leaderboardline.split(',')
+                                        oldscore = leaderboardlineArray[2]
+                                        if score < float(oldscore):
+                                            entry = f"{car},{name},{score}\n"
+                                            leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
+                                            leaderboardlinesnew.append(entry)
+                                            if verbose:
+                                                print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                            if wasfound == False:
+                                entry = f"{car},{name},{score}\n"
+                                leaderboardlinesnew.append(entry)
+                                if verbose:
+                                    print(f"new laptime for {name} in {car} with time {score} for server {file}")
+                            leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
+                            leaderboardwrite = ''.join(leaderboardlinescomb)
+                            leaderboard.seek(0)
+                            leaderboard.truncate()
+                            leaderboard.write(leaderboardwrite)
                             if verbose:
-                                print(f"new laptime for {name} in {car} with time {score} for server {file}")
-                        leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
-                        leaderboardwrite = ''.join(leaderboardlinescomb)
-                        leaderboard.seek(0)
-                        leaderboard.truncate()
-                        leaderboard.write(leaderboardwrite)
-                        if verbose:
-                            print(f"content that was written to laptimes.txt = \n{leaderboardwrite}")
+                                print(f"content that was written to laptimes.txt = \n{leaderboardwrite}")
     except Exception as e:
         print("An exception occurred attempting to find scores for a ACServer.exe server: ", str(e))
 
@@ -351,6 +353,7 @@ def findtimevanilla():
 def check_name(name_to_check):
     if verbose:
         print(f"checking {name_to_check} to see if it matches any banned words")
+        print(f"list of banned words to check against: {banned_words}")
     allowed = True
     for banned_word in banned_words:
         if banned_word.lower() in name_to_check.lower():
@@ -388,7 +391,9 @@ def sort_score(score_type,classcfg):
                     car, name, score= line.split(',')
                     input_method = "Unknown"
             score = score.strip()
-            scores.append([car, name, score, input_method])
+            name_allowed_to_sort = check_name(name)
+            if name_allowed_to_sort:
+                scores.append([car, name, score, input_method])
     if score_type == "leaderboard.txt":
         scores.sort(key=lambda s: float(s[2]), reverse = True)
     else:
