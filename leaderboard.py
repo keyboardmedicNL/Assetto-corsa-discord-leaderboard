@@ -102,46 +102,53 @@ def score_find():
                 init_split = log_line.split(" Drift:")
                 name_array = init_split[0].split("CHAT: ")
                 name_no_id = name_array[1].split(" (")[0]
-                name_clean = name_no_id.replace(',','')
-                name = name_clean
+                name = name_no_id.replace(',','')
                 if verbose:
                     print(f"name = {name}")
-                score = float(init_split[1])
-                if verbose:
-                    print(f"score = {score}")
-                input_method = input_find(index_log_line,log_lines,name)
-                car = find_car(index_log_line,log_lines,name)
-                write_score(name,score,car,input_method,"leaderboard.txt")
+                name_allowed = check_name(name)
+                if name_allowed:
+                    score = float(init_split[1])
+                    if verbose:
+                        print(f"score = {score}")
+                    input_method = input_find(index_log_line,log_lines,name)
+                    car = find_car(index_log_line,log_lines,name)
+                    write_score(name,score,car,input_method,"leaderboard.txt")
             elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
                 # formats logline to variables to use for overtake entry 
                 if verbose:
                     print(f"\nfound score on: {log_line.strip()} for server {file}")
                 init_split = log_line.split("): just scored a ")
                 name_array = init_split[0].split("CHAT: ") 
-                name = name_array[1].split(" (")[0]
+                name_seperated = name_array[1].split(" (")[0]
+                name = name_seperated.replace(',','')
                 if verbose:
                     print(f"name = {name}")
-                score = float(init_split[1])
-                if verbose:
-                    print(f"score = {score}")
-                input_method = input_find(index_log_line,log_lines,name)
-                car = find_car(index_log_line,log_lines,name)
-                write_score(name,score,car,input_method,"leaderboard.txt")
+                name_allowed = check_name(name)
+                if name_allowed:
+                    score = float(init_split[1])
+                    if verbose:
+                        print(f"score = {score}")
+                    input_method = input_find(index_log_line,log_lines,name)
+                    car = find_car(index_log_line,log_lines,name)
+                    write_score(name,score,car,input_method,"leaderboard.txt")
             elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
                 # formats logline to variables to use for laptime entry
                 if verbose:
                     print(f"\nfound laptime on: {log_line.strip()} for server {file}")
                 lap_split = log_line.split(" cuts, laptime ")
                 name_array = lap_split[0].split("Lap completed by ")
-                name = name_array[1].split(",")[0]
+                name_seperated = name_array[1].split(",")[0]
+                name = name_seperated.replace(',','')
                 if verbose:
                     print(f"name = {name}")
-                score = float(lap_split[1])
-                if verbose:
-                    print(f"score = {score}")
-                input_method = input_find(index_log_line,log_lines,name)
-                car = find_car(index_log_line,log_lines,name)
-                write_score(name,score,car,input_method,"laptimes.txt")
+                name_allowed = check_name(name)
+                if name_allowed:
+                    score = float(lap_split[1])
+                    if verbose:
+                        print(f"score = {score}")
+                    input_method = input_find(index_log_line,log_lines,name)
+                    car = find_car(index_log_line,log_lines,name)
+                    write_score(name,score,car,input_method,"laptimes.txt")
             elif str(re.search(".* \[DBG\] Stage.*ended.*", log_line)) != "None":
                 # formats logline to variables to use for sector time entry
                 if verbose:
@@ -150,14 +157,17 @@ def score_find():
                 sector_name_array = sector_split[1].split(" ended for ")
                 sector_name = sector_name_array[0] + "-sector.txt"
                 sector_driver_split = sector_name_array[1].split(" (")
-                name = sector_driver_split[0]
-                sector_time = sector_driver_split[1].split("time: ")[1]
-                minutes,seconds = sector_time.split(":")
-                score = float(float(minutes)*60000)+float(float(seconds)*1000)
-                input_method = input_find(index_log_line,log_lines,name)
-                car = find_car(index_log_line,log_lines,name)
-                has_score_file_check(sector_name)
-                write_score(name,score,car,input_method,sector_name)
+                name_seperated = sector_driver_split[0]
+                name = name_seperated.replace(',','')
+                name_allowed = check_name(name)
+                if name_allowed:
+                    sector_time = sector_driver_split[1].split("time: ")[1]
+                    minutes,seconds = sector_time.split(":")
+                    score = float(float(minutes)*60000)+float(float(seconds)*1000)
+                    input_method = input_find(index_log_line,log_lines,name)
+                    car = find_car(index_log_line,log_lines,name)
+                    has_score_file_check(sector_name)
+                    write_score(name,score,car,input_method,sector_name)
         except Exception as e:
             print("An exception occurred whilst reading logs for scores: ", str(e)) 
 
@@ -291,8 +301,10 @@ def findtimevanilla():
         with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
             resultsJson = json.load(f)
         for result in resultsJson["Result"]:
-            name = result["DriverName"]
-            car = result["CarModel"]
+            name_seperated = result["DriverName"]
+            name = name_seperated.replace(',','')
+            car_seperated = result["CarModel"]
+            car = car_seperated.replace(',','')
             score = result["BestLap"]
             if name != "" and score != 999999999:
                 if verbose:
@@ -334,6 +346,20 @@ def findtimevanilla():
         print("An exception occurred attempting to find scores for a ACServer.exe server: ", str(e))
 
 ### sorting and formatting ####
+
+# checks if name is on banned names list
+def check_name(name_to_check):
+    if verbose:
+        print(f"checking {name_to_check} to see if it matches any banned words")
+    allowed = True
+    for banned_word in banned_words:
+        if banned_word.lower() in name_to_check.lower():
+            allowed = False
+            if verbose:
+                print(f"Found banned word: {banned_word} in the name: {name_to_check}")
+    if verbose and allowed:
+        print(f"{name_to_check} does not match any banned words")
+    return(allowed)
 
 # sort scores in list per entry within 1 master list
 def sort_score(score_type,classcfg):
@@ -989,6 +1015,7 @@ with open("config/config.json") as config:
     elif use_short_name.lower() == "false":
         use_short_name = False
     shmoovinurl = driftscript + overtakescript
+    banned_words = configJson["banned_words"]
     print("succesfully loaded config\n")
 
 #logic for logging to file
