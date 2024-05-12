@@ -28,7 +28,7 @@ def shmoovin_check():
     shmoovin_type = ""
     if exists(f"{serverspath}/{file}/cfg/csp_extra_options.ini"):
         try:
-            configp.read(f"{serverspath}/{file}/cfg/csp_extra_options.ini")
+            configp.read(f"{serverspath}/{file}/cfg/csp_extra_options.ini", encoding='utf-8')
             scripttype = str(configp['SCRIPT_...']['SCRIPT'])
             scripttype = scripttype.replace("'","")
             if scripttype  in overtakescript:
@@ -41,8 +41,8 @@ def shmoovin_check():
                 has_shmoovin = True
                 if verbose:
                     print(f"shmoovin was found with the type = drift")
-        except:
-            pass
+        except Exception as e:
+            print("An exception occurred: ", str(e))
     return(has_shmoovin,shmoovin_type)
 
 # checks if class config is present and returns it
@@ -102,7 +102,8 @@ def score_find():
                 init_split = log_line.split(" Drift:")
                 name_array = init_split[0].split("CHAT: ")
                 name_no_id = name_array[1].split(" (")[0]
-                name = name_no_id
+                name_clean = name_no_id.replace(',','')
+                name = name_clean
                 if verbose:
                     print(f"name = {name}")
                 score = float(init_split[1])
@@ -209,7 +210,8 @@ def find_car(index_log_line,log_lines,name):
                     print(f"found car on: {car_line.strip()} for server {file}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
-                car = car_array[0]
+                car_seperated = car_array[0]
+                car = car_seperated.replace(',','')
                 if verbose:
                     print(f"car = {car}")
                 return(car)
@@ -225,7 +227,8 @@ def find_car(index_log_line,log_lines,name):
                     print(f"found car on: {car_line.strip()} for server {file}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
-                car = car_array[0]
+                car_seperated = car_array[0]
+                car = car_seperated.replace(',','')
                 if verbose:
                     print(f"car = {car}")
                 return(car)
@@ -391,7 +394,7 @@ def sort_score(score_type,classcfg):
     return(filtered_times)
 
 # formats laptimes if class configuration is present to str for use in webhook
-def format_scores(scores,classcfg,doc_type,score_type):
+def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_short_name):
     print("\n")
     if verbose:
         print(f"attempting to format scores with type {score_type} for output {doc_type} with classcfg {classcfg} for server {file}") 
@@ -405,9 +408,9 @@ def format_scores(scores,classcfg,doc_type,score_type):
         scorecounter = 0
         if scorelength > 0:
             if doc_type == "discord" and str(classlist[i]) != "none":
-                finallist.append(f"***class: {str(classlist[i])}***:\n")
+                finallist.append(f"***{str(classlist[i])}***:\n")
             elif doc_type == "html" and str(classlist[i]) != "none":
-                finallist_html.append(f"\n<div class=\"classbox\">\n<h3>class: {str(classlist[i])}</h3>\n</div>\n")
+                finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classlist[i])}</h3>\n</div>\n")
         if scorelength >= leaderboardlimit:
             scorelength = leaderboardlimit
         for classcore in scores[i]:
@@ -423,19 +426,25 @@ def format_scores(scores,classcfg,doc_type,score_type):
                     score_format = f"{minutes}:{seconds}"
                 score_input = classcore[3].strip()
                 if doc_type == "discord":
-                    if show_input == "true" and server_type != "acserver":
+                    if show_input_discord == "true" and not use_short_name and server_type != "acserver":
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
-                    else:
+                    elif show_input_discord == "true" and use_short_name and server_type != "acserver":
+                        short_name = str(classcore[1])[0:6]
+                        finallist.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
+                    elif not use_short_name:
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
+                    elif use_short_name:
+                        short_name = str(classcore[1])[0:6]
+                        finallist.append(f"{scorecounter}.{short_name} {score_format}\n")
                 elif doc_type == "html":
                     if show_input == "true" and server_type != "acserver":
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
-                        short_name = str(classcore[1])[0:8]
+                        short_name = str(classcore[1])[0:6]
                         html_score_format = f"<b>{short_name}</b> - {score_input} - {score_format}"
                         finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
                     else:
                         finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
-                        short_name = str(classcore[1])[0:8]
+                        short_name = str(classcore[1])[0:6]
                         html_score_format = f"<b>{short_name}</b> {score_format}"
                         finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
     finalstr = "".join(finallist)
@@ -453,15 +462,15 @@ def format_scores(scores,classcfg,doc_type,score_type):
             print(f"formatted scores for html = \n{finalstr_html}")
         return(finalstr_html)
 
-def format_sector():  
+def format_sector(show_input_sector,use_short_name):  
     server_files = os.listdir(str(f"{serverspath}/{file}"))
     combined_sectors = []
     combined_sectors_html = []
     for files in server_files:
         if "-sector.txt" in str(files):
             scores = sort_score(files,classcfg)
-            times = format_scores(scores,classcfg,"discord",str(files))
-            times_html = format_scores(scores,classcfg,"html",str(files))
+            times = format_scores(scores,classcfg,"discord",str(files),show_input_sector,use_short_name)
+            times_html = format_scores(scores,classcfg,"html",str(files),show_input_sector,use_short_name)
             sector_name = str(files.split("-sector")[0])
             combined_sectors.append(f"\n**{sector_name}**\n")
             combined_sectors.append(times)
@@ -970,10 +979,15 @@ with open("config/config.json") as config:
     show_input = configJson["show_input"]
     verbose = configJson["verbose"]
     log_to_file = configJson["log_to_file"]
+    use_short_name = configJson["log_to_file"]
     if verbose.lower() == "true":
         verbose = True
     elif verbose.lower() == "false":
         verbose = False
+    if use_short_name.lower() == "true":
+        use_short_name = True
+    elif use_short_name.lower() == "false":
+        use_short_name = False
     shmoovinurl = driftscript + overtakescript
     print("succesfully loaded config\n")
 
@@ -1023,27 +1037,30 @@ while True:
                     has_shmoovin, shmoovin_type = shmoovin_check()
                     if has_shmoovin == True:
                         scores = sort_score("leaderboard.txt",classcfg)
-                        finalstr = format_scores(scores,classcfg,"discord","leaderboard")
-                        finalstr_html = format_scores(scores,classcfg,"html","leaderboard")
-                    final_sector_str,final_sector_str_html = format_sector()
+                        finalstr = format_scores(scores,classcfg,"discord","leaderboard",show_input,use_short_name)
+                        finalstr_html = format_scores(scores,classcfg,"html","leaderboard",show_input,use_short_name)
+                    final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
                 elif server_type == "acserver":
                     findtimevanilla()
                 times = sort_score("laptimes.txt",classcfg)
-                finaltimes = format_scores(times,classcfg,"discord","laptimes")
-                finaltimes_html = format_scores(times,classcfg,"html","laptimes") 
+                finaltimes = format_scores(times,classcfg,"discord","laptimes",show_input,use_short_name)
+                finaltimes_html = format_scores(times,classcfg,"html","laptimes",show_input,use_short_name) 
                 if final_sector_str != "" and "currently empty" in finaltimes.lower():
                     finaltimes = ""
                 if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
                     finaltimes_html = ""
                 finaltimes_combined = finaltimes + "\n" + final_sector_str
-                while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:
-                    leaderboardlimit = leaderboardlimit - 1
-                    print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit}\n")
-                    finaltimes = format_scores(times,classcfg,"discord","laptimes")
-                    final_sector_str,final_sector_str_html = format_sector()
+                while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
+                    print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
+                    finaltimes = format_scores(times,classcfg,"discord","laptimes",False,True)
+                    final_sector_str,final_sector_str_html = format_sector(False,True)
                     finaltimes_combined = finaltimes + "\n" + final_sector_str
                     if has_shmoovin == True:
-                        finalstr = format_scores(scores,classcfg,"discord","leaderboard")
+                        finalstr = format_scores(scores,classcfg,"discord","leaderboard",False,True)
+                    if leaderboardlimit < 3:
+                        finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
+                        finalstr = ""
+                    leaderboardlimit = leaderboardlimit - 1
                 finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
                 sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
                 sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
