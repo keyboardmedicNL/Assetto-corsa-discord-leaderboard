@@ -1063,15 +1063,11 @@ while True:
                     final_sector_str = ""
                     final_sector_str_html = ""
                     if server_type == "assettoserver":
-                        sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime)
+                        sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime, reverse=True) 
                         for log_index, log in enumerate(sorted_files):
                             if log_index < log_lookback :
-                                if log_index != 0:
-                                    previous_log_index = int(log_index-1)
-                                    previous_log = sorted_files[previous_log_index]
-                                else:
-                                    previous_log = log
-                                    previous_log_index = int(0)
+                                previous_log_index = int(log_index + 1)
+                                previous_log = sorted_files[previous_log_index]
                                 if verbose:
                                     print(f"Log file that is being read is: {str(log)} for server {file}")
                                     print(f"Previous log file is : {str(previous_log)} for server {file}")
