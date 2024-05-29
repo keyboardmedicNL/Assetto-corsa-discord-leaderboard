@@ -961,15 +961,15 @@ def deletemessage():
                 print(f"discord message {message_id} is unused and is now deleted")
             elif "429" in str(rl):
                 for i in range(1,60):
-                    print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
+                    print(f"we are being rate limited, waiting for {i} seconds to update discord message with id {message_id}")
                     time.sleep(i)
                     rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
                     if "204" in str(rl):
                         break
                     if i == 60 and not "204" in str(rl):
-                        print(f"discord message {messageid} could not be deleted with status code {rl}") 
+                        print(f"discord message {message_id} could not be deleted with status code {rl}") 
             else:
-                print(f"discord message {messageid} could not be deleted with status code {rl}") 
+                print(f"discord message {message_id} could not be deleted with status code {rl}") 
             os.remove(f"config/messages/{message}")
             if verbose:
                 print(f"removing unused message file {message}")
