@@ -1021,6 +1021,7 @@ with open("config/config.json") as config:
         use_short_name = False
     shmoovinurl = driftscript + overtakescript
     banned_words = configJson["banned_words"]
+    log_lookback = int(configJson["log_lookback"])
     print("succesfully loaded config\n")
 
 #logic for logging to file
@@ -1043,6 +1044,7 @@ while True:
     for serverspath in serverspathlst:
         filenames= os.listdir(str(serverspath))
         print(f"list of folders to check:{filenames}")
+        print(f"checking {log_lookback} logs back for entries")
         for file in filenames:
             try:
                 leaderboardlimit = int(configJson["leaderboardlimit"])
@@ -1063,18 +1065,21 @@ while True:
                     if server_type == "assettoserver":
                         sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime)
                         for log_index, log in enumerate(sorted_files):
-                            if log_index != 0:
-                                previous_log_index = int(log_index-1)
-                                previous_log = sorted_files[previous_log_index]
+                            if log_index < log_lookback :
+                                if log_index != 0:
+                                    previous_log_index = int(log_index-1)
+                                    previous_log = sorted_files[previous_log_index]
+                                else:
+                                    previous_log = log
+                                    previous_log_index = int(0)
+                                if verbose:
+                                    print(f"Log file that is being read is: {str(log)} for server {file}")
+                                    print(f"Previous log file is : {str(previous_log)} for server {file}")
+                                with open(str(log), encoding='utf-8', errors='ignore' "r") as log_file:
+                                    log_lines = log_file.readlines()
+                                score_find()
                             else:
-                                previous_log = log
-                                previous_log_index = int(0)
-                            if verbose:
-                                print(f"Log file that is being read is: {str(log)} for server {file}")
-                                print(f"Previous log file is : {str(previous_log)} for server {file}")
-                            with open(str(log), encoding='utf-8', errors='ignore' "r") as log_file:
-                                log_lines = log_file.readlines()
-                            score_find()
+                                break
                         has_shmoovin, shmoovin_type = shmoovin_check()
                         if has_shmoovin == True:
                             scores = sort_score("leaderboard.txt",classcfg)
