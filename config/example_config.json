@@ -12,5 +12,6 @@
     "show_input": "true",
     "verbose": "false",
     "log_to_file": "false",
-    "banned_words":["penis","vagina","retard"]
+    "banned_words":["penis","vagina","retard"],
+    "log_lookback": "3"
 }
