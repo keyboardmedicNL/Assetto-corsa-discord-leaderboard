@@ -190,8 +190,8 @@ def input_find(index_log_line,log_lines,name):
     if input_method == "Unknown":
         try:
             if verbose:
-                print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
-            with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as second_log_file:
+                print(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(previous_log)}")
+            with open(str(previous_log), encoding='utf-8', errors='ignore' "r") as second_log_file:
                 loglines_second_last = second_log_file.readlines()
             for second_input_line in reversed(loglines_second_last):
                 if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", second_input_line)) != "None" and str(name) in input_line:
@@ -228,8 +228,8 @@ def find_car(index_log_line,log_lines,name):
                 break
     if car == "empty":
         if verbose:
-            print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(sorted_files[-2])}")
-        with open(str(sorted_files[-2]), encoding='utf-8', errors='ignore' "r") as f:
+            print(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(previous_log)}")
+        with open(str(previous_log), encoding='utf-8', errors='ignore' "r") as f:
             loglines_second_last = f.readlines()
         for car_line in reversed(loglines_second_last):
             if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
@@ -1044,58 +1044,69 @@ while True:
         filenames= os.listdir(str(serverspath))
         print(f"list of folders to check:{filenames}")
         for file in filenames:
-            leaderboardlimit = int(configJson["leaderboardlimit"])
-            # checks if folder is actually a server folder
-            if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}/{str(file)}"):
-                print(f"\nchecking server {file}")
-                has_score_file_check("leaderboard.txt")
-                has_score_file_check("laptimes.txt")
-                finalstr = "NA"
-                finalstr_html = "NA"
-                has_shmoovin = False
-                shmoovin_type = "none"
-                main_loop_counter = main_loop_counter+1
-                server_type = server_type_check()
-                classcfg = has_classcfg()
-                final_sector_str = ""
-                final_sector_str_html = ""
-                if server_type == "assettoserver":
-                    sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime)
-                    if verbose:
-                        print(f"Log file that is being read is: {str(sorted_files[-1])} for server {file}")
-                    with open(str(sorted_files[-1]), encoding='utf-8', errors='ignore' "r") as log_file:
-                        log_lines = log_file.readlines()
-                    score_find()
-                    has_shmoovin, shmoovin_type = shmoovin_check()
-                    if has_shmoovin == True:
-                        scores = sort_score("leaderboard.txt",classcfg)
-                        finalstr = format_scores(scores,classcfg,"discord","leaderboard",show_input,use_short_name)
-                        finalstr_html = format_scores(scores,classcfg,"html","leaderboard",show_input,use_short_name)
-                    final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
-                elif server_type == "acserver":
-                    findtimevanilla()
-                times = sort_score("laptimes.txt",classcfg)
-                finaltimes = format_scores(times,classcfg,"discord","laptimes",show_input,use_short_name)
-                finaltimes_html = format_scores(times,classcfg,"html","laptimes",show_input,use_short_name) 
-                if final_sector_str != "" and "currently empty" in finaltimes.lower():
-                    finaltimes = ""
-                if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
-                    finaltimes_html = ""
-                finaltimes_combined = finaltimes + "\n" + final_sector_str
-                while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
-                    print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
-                    finaltimes = format_scores(times,classcfg,"discord","laptimes",False,True)
-                    final_sector_str,final_sector_str_html = format_sector(False,True)
+            try:
+                leaderboardlimit = int(configJson["leaderboardlimit"])
+                # checks if folder is actually a server folder
+                if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}/{str(file)}"):
+                    print(f"\nchecking server {file}")
+                    has_score_file_check("leaderboard.txt")
+                    has_score_file_check("laptimes.txt")
+                    finalstr = "NA"
+                    finalstr_html = "NA"
+                    has_shmoovin = False
+                    shmoovin_type = "none"
+                    main_loop_counter = main_loop_counter+1
+                    server_type = server_type_check()
+                    classcfg = has_classcfg()
+                    final_sector_str = ""
+                    final_sector_str_html = ""
+                    if server_type == "assettoserver":
+                        sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime)
+                        for log_index, log in enumerate(sorted_files):
+                            if log_index != 0:
+                                previous_log_index = int(log_index-1)
+                                previous_log = sorted_files[previous_log_index]
+                            else:
+                                previous_log = log
+                                previous_log_index = int(0)
+                            if verbose:
+                                print(f"Log file that is being read is: {str(log)} for server {file}")
+                                print(f"Previous log file is : {str(previous_log)} for server {file}")
+                            with open(str(log), encoding='utf-8', errors='ignore' "r") as log_file:
+                                log_lines = log_file.readlines()
+                            score_find()
+                        has_shmoovin, shmoovin_type = shmoovin_check()
+                        if has_shmoovin == True:
+                            scores = sort_score("leaderboard.txt",classcfg)
+                            finalstr = format_scores(scores,classcfg,"discord","leaderboard",show_input,use_short_name)
+                            finalstr_html = format_scores(scores,classcfg,"html","leaderboard",show_input,use_short_name)
+                        final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
+                    elif server_type == "acserver":
+                        findtimevanilla()
+                    times = sort_score("laptimes.txt",classcfg)
+                    finaltimes = format_scores(times,classcfg,"discord","laptimes",show_input,use_short_name)
+                    finaltimes_html = format_scores(times,classcfg,"html","laptimes",show_input,use_short_name) 
+                    if final_sector_str != "" and "currently empty" in finaltimes.lower():
+                        finaltimes = ""
+                    if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
+                        finaltimes_html = ""
                     finaltimes_combined = finaltimes + "\n" + final_sector_str
-                    if has_shmoovin == True:
-                        finalstr = format_scores(scores,classcfg,"discord","leaderboard",False,True)
-                    if leaderboardlimit < 3:
-                        finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
-                        finalstr = ""
-                    leaderboardlimit = leaderboardlimit - 1
-                finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
-                sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
-                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
+                    while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
+                        print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
+                        finaltimes = format_scores(times,classcfg,"discord","laptimes",False,True)
+                        final_sector_str,final_sector_str_html = format_sector(False,True)
+                        finaltimes_combined = finaltimes + "\n" + final_sector_str
+                        if has_shmoovin == True:
+                            finalstr = format_scores(scores,classcfg,"discord","leaderboard",False,True)
+                        if leaderboardlimit < 3:
+                            finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
+                            finalstr = ""
+                        leaderboardlimit = leaderboardlimit - 1
+                    finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
+                    sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
+                    sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
+            except Exception as e:
+                print(f"an exception occured in main loop whilst checking folder: {file} with exception: {str(e)}")
         deletemessage()
         delete_html()
     print(f"\nwaiting for {interval} minutes\n")
