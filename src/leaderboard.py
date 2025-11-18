@@ -54,7 +54,7 @@ def shmoovin_check():
     return(has_shmoovin,shmoovin_type)
 
 # checks if class config is present and returns it
-def has_classcfg():
+def get_classcfg():
     logging.debug(f"Checking if classcfg exsists in discordbotcfg.ini for server {file}")
 
     classcfg = {"none": ["none"]}
@@ -105,65 +105,36 @@ def score_find():
             if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
                 # formats logline to variables to use for drift entry
                 loggin.debug(f"found score on: {log_line.strip()} for server {file}")
-                
+                leaderboard_file_name = "leaderboard.txt"
                 init_split = log_line.split(" Drift:")
                 name_array = init_split[0].split("CHAT: ")
                 name_no_id = name_array[1].split(" (")[0]
                 name = name_no_id.replace(',','')
-                logging.debug(f"name = {name}")
-
-                name_allowed = check_name(name)
-                if name_allowed:
-                    score = float(init_split[1])
-                    logging.debug(f"score = {score}")
-    
-                    input_method = input_find(index_log_line,log_lines,name)
-                    car = find_car(index_log_line,log_lines,name)
-                    write_score(name,score,car,input_method,"leaderboard.txt")
             
             elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
                 # formats logline to variables to use for overtake entry 
-                logging.debug(f"\nfound score on: {log_line.strip()} for server {file}")
+                logging.debug(f"found score on: {log_line.strip()} for server {file}")
+                leaderboard_file_name = "leaderboard.txt"
                 init_split = log_line.split("): just scored a ")
                 name_array = init_split[0].split("CHAT: ") 
                 name_seperated = name_array[1].split(" (")[0]
                 name = name_seperated.replace(',','')
-                logging.debug(f"name = {name}")
-
-                name_allowed = check_name(name)
-                if name_allowed:
-                    score = float(init_split[1])
-                    logging.debug(f"score = {score}")
-                    
-                    input_method = input_find(index_log_line,log_lines,name)
-                    car = find_car(index_log_line,log_lines,name)
-                    write_score(name,score,car,input_method,"leaderboard.txt")
             
             elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
                 # formats logline to variables to use for laptime entry
-                logging.debug(f"\nfound laptime on: {log_line.strip()} for server {file}")
+                logging.debug(f"found laptime on: {log_line.strip()} for server {file}")
+                leaderboard_file_name = "laptimes.txt"
                 lap_split = log_line.split(" cuts, laptime ")
                 name_array = lap_split[0].split("Lap completed by ")
                 name_seperated = name_array[1].split(",")[0]
                 name = name_seperated.replace(',','')
-                logging.debug(f"name = {name}")
-
-                name_allowed = check_name(name)
-                if name_allowed:
-                    score = float(lap_split[1])
-                    logging.debug(f"score = {score}")
-                    
-                    input_method = input_find(index_log_line,log_lines,name)
-                    car = find_car(index_log_line,log_lines,name)
-                    write_score(name,score,car,input_method,"laptimes.txt")
             
             elif str(re.search(".* \[DBG\] Stage.*ended.*", log_line)) != "None":
                 # formats logline to variables to use for sector time entry
                 logging.debug(f"\nfound sector time on: {log_line.strip()} for server {file}")
-                
                 sector_split = log_line.split("Stage ")
                 sector_name_array = sector_split[1].split(" ended for ")
-                sector_name = sector_name_array[0] + "-sector.txt"
+                leaderboard_file_name = sector_name_array[0] + "-sector.txt"
                 sector_driver_split = sector_name_array[1].split(" (")
                 name_seperated = sector_driver_split[0]
                 name = name_seperated.replace(',','')
@@ -176,9 +147,19 @@ def score_find():
                     score = float(float(minutes)*60000)+float(float(seconds)*1000)
                     input_method = input_find(index_log_line,log_lines,name)
                     car = find_car(index_log_line,log_lines,name)
-                    has_score_file_check(sector_name)
-                    write_score(name,score,car,input_method,sector_name)
-        
+                    has_score_file_check(leaderboard_file_name)
+                    write_score(name,score,car,input_method,leaderboard_file_name)
+
+            if leaderboard_file_name == "leaderboard.txt" or leaderboard_file_name == "laptimes.txt":
+                logging.debug(f"name = {name}")
+                name_allowed = check_name(name)
+                if name_allowed:
+                    score = float(init_split[1])
+                    logging.debug(f"score = {score}")
+                    input_method = input_find(index_log_line,log_lines,name)
+                    car = find_car(index_log_line,log_lines,name)
+                    write_score(name,score,car,input_method,leaderboard_file_name)
+
         except Exception as e:
             print("An exception occurred whilst reading logs for scores: ", str(e)) 
 
@@ -207,7 +188,6 @@ def input_find(index_log_line,log_lines,name):
                     logging.debug(f"found input method on: {second_input_line.strip()} for server {file}")
                     input_split = second_input_line.split("InputMethod=\"")[1]
                     input_method = input_split.split("\" Rain")[0]
-                    break
 
         except:
             logging.debug(f"could not find input method for {str(name)}")
@@ -1114,7 +1094,8 @@ with open("config/config.json") as config:
     print("succesfully loaded config\n")
 
 # main loop 
-logging.info("starting main loop\n")
+logging.info("Starting assetto discord leaderboards...")
+logging.info("Only errors will be displayed here unless otherwise configured.....")
 
 while True:
     # loop trough folders in server folder
@@ -1122,38 +1103,31 @@ while True:
     
     for serverspath in serverspathlst:
         filenames= os.listdir(str(serverspath))
-
         logging.debug(f"list of folders to check:{filenames}")
         logging.debug(f"checking {log_lookback} logs back for entries")
-        
         for file in filenames:
-            
             try:
                 leaderboardlimit = int(configJson["leaderboardlimit"])
                 # checks if folder is actually a server folder
-                
                 if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}/{str(file)}"):
                     logging.debug(f"\nchecking server {file}")
 
                     has_score_file_check("leaderboard.txt")
                     has_score_file_check("laptimes.txt")
+                    server_type = server_type_check()
+                    classcfg = get_classcfg()
+
                     finalstr = "NA"
                     finalstr_html = "NA"
-                    has_shmoovin = False
-                    shmoovin_type = "none"
                     main_loop_counter = main_loop_counter+1
-                    
-                    server_type = server_type_check()
-                    classcfg = has_classcfg()
                     
                     final_sector_str = ""
                     final_sector_str_html = ""
                     
-                    if server_type == "assettoserver":
+                    if server_type == "assettoserver": #if servertype is 3rd party server
                         sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime, reverse=True) 
                         
                         for log_index, log in enumerate(sorted_files):
-                            
                             if log_index < log_lookback :
                                 previous_log_index = int(log_index + 1)
                                 previous_log = sorted_files[previous_log_index]
@@ -1169,6 +1143,7 @@ while True:
                             else:
                                 
                                 break
+
                         has_shmoovin, shmoovin_type = shmoovin_check()
                         
                         if has_shmoovin == True:

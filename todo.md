@@ -1,0 +1,2 @@
+- change string splits to regex
+- add multiple messages to allow longer leaderboards
