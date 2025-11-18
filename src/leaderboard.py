@@ -68,7 +68,6 @@ def get_classcfg():
         
         except:
             logging.debug(f"discordcfg was found but no classcfg present")
-            pass
 
     logging.debug(f"classcfg = {classcfg}")
 
