@@ -369,12 +369,12 @@ def check_name(name_to_check):
     return(allowed)
 
 # sort scores in list per entry within 1 master list
-def sort_score(score_type,classcfg):
+def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -> list:
     logging.debug(f"attempting to sort scores with type {score_type} for server {file}") 
     scores = []
     filtered_times = []
 
-    with open(f"{servers_path}/{file}/{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
+    with open(os.path.join(combined_server_path_rel,score_type), 'r', encoding='utf-8', errors='ignore') as score_file:
         for line in score_file:
             if score_type == "leaderboard.txt":
                 try:
@@ -1154,8 +1154,8 @@ while True:
                     has_shmoovin, shmoovin_type = shmoovin_check()
                     
                     if has_shmoovin:
-                        sorted_scares = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                        finalstr = format_scores(sorted_scares,class_cfg,"discord","leaderboard",show_input,use_short_name)
+                        sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
+                        finalstr = format_scores(sorted_scores,class_cfg,"discord","leaderboard",show_input,use_short_name)
                         finalstr_html = format_scores(scores,class_cfg,"html","leaderboard",show_input,use_short_name)
                     final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
                 
