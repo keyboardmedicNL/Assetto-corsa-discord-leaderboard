@@ -1,2 +1,5 @@
 - change string splits to regex
 - add multiple messages to allow longer leaderboards
+- use path.join
+- change cfgs to yaml
+- make cfg return false if no cfg found

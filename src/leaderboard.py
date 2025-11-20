@@ -29,15 +29,16 @@ logPath = "/logs/"
 # functions
 
 # checks if shmoovin is present in config
-def shmoovin_check():
-    logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {file}")
+def shmoovin_check(combined_server_path_rel: str) -> tuple[str,str]:
+    logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
     
     has_shmoovin = False
     shmoovin_type = ""
+    csp_extra_path = os.path.join(combined_server_path_rel, cfg, csp_extra_options.ini)
 
-    if exists(f"{serverspath}/{file}/cfg/csp_extra_options.ini"):
+    if exists(csp_extra_path):
     
-        configp.read(f"{serverspath}/{file}/cfg/csp_extra_options.ini", encoding='utf-8')
+        configp.read(csp_extra_path, encoding='utf-8')
         scripttype = str(configp['SCRIPT_...']['SCRIPT'])
         scripttype = scripttype.replace("'","")
 
@@ -53,14 +54,14 @@ def shmoovin_check():
 
     return(has_shmoovin,shmoovin_type)
 
-# checks if class config is present and returns it
-def get_classcfg():
-    logging.debug(f"Checking if classcfg exsists in discordbotcfg.ini for server {file}")
+def get_class_cfg(combined_server_path_rel: str) -> any:
+    logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {file}")
 
     classcfg = {"none": ["none"]}
+    config_file_path = os.path.join(combined_server_path_rel,"discordbotcfg.json")
 
-    if exists(f"{serverspath}/{file}//discordbotcfg.json"):
-        with open(f"{serverspath}/{file}//discordbotcfg.json") as config:
+    if exists(config_file_path):
+        with open(config_file_path) as config:
             configJson = json.load(config)
         
         try:
@@ -73,24 +74,24 @@ def get_classcfg():
 
     return(classcfg)
 
-# checks if server folder contains assettoserver.exe used to filter results
-def server_type_check():
-    logging.debug(f"Checking if assettoserver.exe or acServer.exe exsists for server {file}")
+# checks if server folder contains assettoserver.exe or acserver.exe used to filter results
+def server_type_check(combined_server_path_rel: str) -> str:
+    logging.debug(f"Checking if AssettoServer.exe or acServer.exe exsists for server {combined_server_path_rel}")
     
-    if exists(f"{serverspath}/{file}//assettoserver.exe"):
-        logging.debug(f"{file} is assettoserver")
-        return("assettoserver")
+    if exists(os.path.join(combined_server_path_rel,"AssettoServer.exe")):
+        logging.debug(f"{combined_server_path_rel} is AssettoServer")
+        return("AssettoServer")
 
-    elif exists(f"{serverspath}/{file}//acServer.exe"):
-        logging.debug(f"{file} is acServer")
-        return("acserver")
+    elif exists(os.path.join(combined_server_path_rel,"acServer.exe")):
+        logging.debug(f"{combined_server_path_rel} is acServer")
+        return("acServer")
 
-# checks if laptimes file exsists and if not creates it
-def has_score_file_check(file_name):
-    if not exists(f"{serverspath}/{file}/{file_name}"):
-        with open(f"{serverspath}/{file}/{file_name}", 'w') as score_file:
+def has_score_file_check(file_name: str,combined_server_path_rel: str):
+    score_file_path_rel = os.path.join(combined_server_path_rel, file_name)
+    if not exists(score_file_path_rel):
+        with open(score_file_path_rel, 'w') as score_file:
             score_file.write("")
-        logging.debug(f"{file_name} was not found so it was created for server {file}")
+        logging.debug(f"{score_file_path_rel} was not found so it was created")
 
 
 ### score and time find ###
@@ -231,7 +232,7 @@ def write_score(name,score,car,input_method,file_name):
     if verbose:
         print(f"attempting to write found score to {file_name} for server {file}") 
     
-    with open(f"{serverspath}/{file}/{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
+    with open(f"{servers_path}/{file}/{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
         
         try:
             score_file_lines_new = []
@@ -292,7 +293,7 @@ def write_score(name,score,car,input_method,file_name):
 def findtimevanilla():
     logging.debug(f"Checking for acServer.exe score entries for server{file}") 
     try:
-        latest_file = max(glob.glob(f"{serverspath}/{file}/results/*"), key=os.path.getctime)
+        latest_file = max(glob.glob(f"{servers_path}/{file}/results/*"), key=os.path.getctime)
         logging.debug(f"results file that is being read is: {latest_file} for server {file}\n")
         
         with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
@@ -310,7 +311,7 @@ def findtimevanilla():
                 
                 if name != "" and score != 999999999:
                     logging.debug(f"found laptime for {name} in {car} with time {score}")
-                    with open(f"{serverspath}/{file}/laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
+                    with open(f"{servers_path}/{file}/laptimes.txt", encoding='utf-8', errors='ignore', mode="r+") as leaderboard:
                             leaderboardlinesnew = []
                             wasfound = False
                             leaderboardlines = leaderboard.readlines()
@@ -373,7 +374,7 @@ def sort_score(score_type,classcfg):
     scores = []
     filtered_times = []
 
-    with open(f"{serverspath}/{file}/{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
+    with open(f"{servers_path}/{file}/{score_type}", 'r', encoding='utf-8', errors='ignore') as score_file:
         for line in score_file:
             if score_type == "leaderboard.txt":
                 try:
@@ -529,7 +530,7 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
         return(finalstr_html)
 
 def format_sector(show_input_sector,use_short_name):  
-    server_files = os.listdir(str(f"{serverspath}/{file}"))
+    server_files = os.listdir(str(f"{servers_path}/{file}"))
     combined_sectors = []
     combined_sectors_html = []
     
@@ -552,12 +553,12 @@ def format_sector(show_input_sector,use_short_name):
 # formats and sends to html files for webserver
 def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     logging.debug(f"\nattempting to send formatted scores to html for server {file}") 
-    configp.read(f"{serverspath}/{file}/cfg/server_cfg.ini")
+    configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     showtimes = True
     
-    if exists(f"{serverspath}/{file}//discordbotcfg.json"):
-        with open(f"{serverspath}/{file}//discordbotcfg.json") as config:
+    if exists(f"{servers_path}/{file}//discordbotcfg.json"):
+        with open(f"{servers_path}/{file}//discordbotcfg.json") as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
@@ -668,13 +669,13 @@ body {
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     logging.debug(f"attempting to send scores to discord for server {file}") 
-    configp.read(f"{serverspath}/{file}/cfg/server_cfg.ini")
+    configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     # checks if laptimes and shmoovin score should be shown
     showtimes = True
     
-    if exists(f"{serverspath}/{file}//discordbotcfg.json"):
-        with open(f"{serverspath}/{file}//discordbotcfg.json") as config:
+    if exists(f"{servers_path}/{file}//discordbotcfg.json"):
+        with open(f"{servers_path}/{file}//discordbotcfg.json") as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
@@ -691,7 +692,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     
     # checks if full server status should be shown and formats data for it
     if onlyleaderboards.lower() == "false":
-        configp.read(f"{serverspath}/{file}/cfg/server_cfg.ini")
+        configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
         httpport = str(configp['SERVER']['HTTP_PORT'])
         serverhttp = f"{serveradress}:{httpport}"
         try:
@@ -1061,9 +1062,9 @@ def delete_html():
 with open("config/config.json") as config:
     configJson = json.load(config)
     interval = configJson["interval"]
-    serverspathlst = configJson["serverspath"]
+    servers_pathlst = configJson["serverspath"]
     webhookurl = configJson["webhookurl"]
-    folderidentifier = configJson["folderindentifier"]
+    folder_identifier = configJson["folderindentifier"]
     leaderboardlimit = int(configJson["leaderboardlimit"])
     driftscript = configJson["shmoovindrifturl"]
     overtakescript = configJson["shmoovinovertakeurl"]
@@ -1099,93 +1100,98 @@ logging.info("Only errors will be displayed here unless otherwise configured....
 while True:
     # loop trough folders in server folder
     main_loop_counter = -1
-    
-    for serverspath in serverspathlst:
-        filenames= os.listdir(str(serverspath))
-        logging.debug(f"list of folders to check:{filenames}")
+       
+    for servers_path in servers_pathlst:
+        #set default vars for use in instance of loop // replace with defaults in functions later
+        has_shmoovin = False
+        shmoovin_type = ""
+
+        folders_in_servers_path= os.listdir(str(servers_path))
+
+        logging.debug(f"list of folders to check:{folders_in_servers_path}")
         logging.debug(f"checking {log_lookback} logs back for entries")
-        for file in filenames:
-            try:
-                leaderboardlimit = int(configJson["leaderboardlimit"])
-                # checks if folder is actually a server folder
-                if folderidentifier in file.lower() and os.path.isdir(f"{str(serverspath)}/{str(file)}"):
-                    logging.debug(f"\nchecking server {file}")
 
-                    has_score_file_check("leaderboard.txt")
-                    has_score_file_check("laptimes.txt")
-                    server_type = server_type_check()
-                    classcfg = get_classcfg()
+        for server_folder in folders_in_servers_path:
 
-                    finalstr = "NA"
-                    finalstr_html = "NA"
-                    main_loop_counter = main_loop_counter+1
+            combined_server_path_rel = os.path.join(servers_path,server_folder)
+            leaderboardlimit = int(configJson["leaderboardlimit"])
+            
+            # checks if folder is actually a server folder
+            if folder_identifier in server_folder.lower() and os.path.isdir(combined_server_path_rel):
+                logging.debug(f"checking server {combined_server_path_rel}")
+
+                has_score_file_check("leaderboard.txt",combined_server_path_rel)
+                has_score_file_check("laptimes.txt",combined_server_path_rel)
+                server_type = server_type_check(combined_server_path_rel)
+                class_cfg = get_class_cfg(combined_server_path_rel)
+
+                finalstr = "NA"
+                finalstr_html = "NA"
+                main_loop_counter = main_loop_counter+1
+                
+                final_sector_str = ""
+                final_sector_str_html = ""
+                
+                if server_type == "AssettoServer":
+
+                    # sorts logs in a list by creation date with newest first
+                    sorted_log_files = sorted(glob.glob(os.path.join(combined_server_path_rel,logPath,"*")), key=os.path.getctime, reverse=True) 
                     
-                    final_sector_str = ""
-                    final_sector_str_html = ""
-                    
-                    if server_type == "assettoserver": #if servertype is 3rd party server
-                        sorted_files = sorted(glob.glob(f"{serverspath}/{file}{logPath}*"), key=os.path.getctime, reverse=True) 
-                        
-                        for log_index, log in enumerate(sorted_files):
-                            if log_index < log_lookback :
-                                previous_log_index = int(log_index + 1)
-                                previous_log = sorted_files[previous_log_index]
-                                
-                                if verbose:
-                                    print(f"Log file that is being read is: {str(log)} for server {file}")
-                                    print(f"Previous log file is : {str(previous_log)} for server {file}")
-                                
-                                with open(str(log), encoding='utf-8', errors='ignore' "r") as log_file:
-                                    log_lines = log_file.readlines()
-                                score_find()
+                    for log_index, selected_log in enumerate(sorted_log_files):
+
+                        if log_index < log_lookback : # checks if current logs are within the set amount of logs to look back at
+                            previous_log = sorted_log_files[pint(log_index + 1)]
+                            logging.debug(f"Log file that is being read is: {str(selected_log)}")
                             
-                            else:
-                                
-                                break
+                            with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
+                                selected_log_lines = log_file.readlines()
 
-                        has_shmoovin, shmoovin_type = shmoovin_check()
+                            score_find(selected_log_lines)
                         
-                        if has_shmoovin == True:
-                            scores = sort_score("leaderboard.txt",classcfg)
-                            finalstr = format_scores(scores,classcfg,"discord","leaderboard",show_input,use_short_name)
-                            finalstr_html = format_scores(scores,classcfg,"html","leaderboard",show_input,use_short_name)
-                        final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
+                        else: # breaks for loop if log loopback count has been exceeded
+                            break
+
+                    has_shmoovin, shmoovin_type = shmoovin_check()
                     
-                    elif server_type == "acserver":
-                        findtimevanilla()
-                    
-                    times = sort_score("laptimes.txt",classcfg)
-                    finaltimes = format_scores(times,classcfg,"discord","laptimes",show_input,use_short_name)
-                    finaltimes_html = format_scores(times,classcfg,"html","laptimes",show_input,use_short_name) 
-                    
-                    if final_sector_str != "" and "currently empty" in finaltimes.lower():
-                        finaltimes = ""
-                    
-                    if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
-                        finaltimes_html = ""
+                    if has_shmoovin:
+                        sorted_scares = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
+                        finalstr = format_scores(sorted_scares,class_cfg,"discord","leaderboard",show_input,use_short_name)
+                        finalstr_html = format_scores(scores,class_cfg,"html","leaderboard",show_input,use_short_name)
+                    final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
+                
+                elif server_type == "acServer":
+                    findtimevanilla()
+                
+                times = sort_score("laptimes.txt",class_cfg)
+                finaltimes = format_scores(times,class_cfg,"discord","laptimes",show_input,use_short_name)
+                finaltimes_html = format_scores(times,class_cfg,"html","laptimes",show_input,use_short_name) 
+                
+                if final_sector_str != "" and "currently empty" in finaltimes.lower():
+                    finaltimes = ""
+                
+                if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
+                    finaltimes_html = ""
+                finaltimes_combined = finaltimes + "\n" + final_sector_str
+                
+                while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
+                    print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
+                    finaltimes = format_scores(times,class_cfg,"discord","laptimes",False,True)
+                    final_sector_str,final_sector_str_html = format_sector(False,True)
                     finaltimes_combined = finaltimes + "\n" + final_sector_str
                     
-                    while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
-                        print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
-                        finaltimes = format_scores(times,classcfg,"discord","laptimes",False,True)
-                        final_sector_str,final_sector_str_html = format_sector(False,True)
-                        finaltimes_combined = finaltimes + "\n" + final_sector_str
-                        
-                        if has_shmoovin == True:
-                            finalstr = format_scores(scores,classcfg,"discord","leaderboard",False,True)
-                        
-                        if leaderboardlimit < 3:
-                            finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
-                            finalstr = ""
-                        
-                        leaderboardlimit = leaderboardlimit - 1
+                    if has_shmoovin == True:
+                        finalstr = format_scores(scores,class_cfg,"discord","leaderboard",False,True)
                     
-                    finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
-                    sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
-                    sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
+                    if leaderboardlimit < 3:
+                        finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
+                        finalstr = ""
+                    
+                    leaderboardlimit = leaderboardlimit - 1
+                
+                finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
+                sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
+                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
             
-            except Exception as e:
-                logging.error(f"an exception occured in main loop whilst checking folder: {file} with exception: {str(e)}")
         
         deletemessage()
         delete_html()

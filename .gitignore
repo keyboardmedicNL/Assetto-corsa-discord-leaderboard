@@ -5,3 +5,6 @@
 /ignore
 /html
 log.txt
+/config/config.yaml
+*.log
+__pycache__
