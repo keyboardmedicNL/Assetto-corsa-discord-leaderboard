@@ -100,8 +100,12 @@ def has_score_file_check(file_name: str,combined_server_path_rel: str):
 ### score and time find ###
 
 # opens and loops trough last logfile to find score entries and writes them to the appropriate files
-def score_find(selected_log_lines):
+def score_find(selected_log: str, previous_log: str):
     logging.debug(f"Checking log for score entries")
+
+    with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
+        selected_log_lines = log_file.readlines()
+
     for index_log_line,log_line in enumerate(selected_log_lines):
 
         leaderboard_file_name = ""
@@ -111,46 +115,54 @@ def score_find(selected_log_lines):
             leaderboard_file_name = "leaderboard.txt"
             name = str(shmoovin_match[0][0])
             score = str(shmoovin_match[0][1])
-            score_find_additional(name,score,leaderboard_file_name)
+            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log)
             
         elif lap_match := (re.findall(".* \[INF\] Lap completed by (.*), 0 cuts, laptime (\d*)", log_line)):
             logging.debug(f"found laptime on: {log_line.strip()}")
             leaderboard_file_name = "laptimes.txt"
             name = str(lap_match[0][0])
             score = str(lap_match[0][1])
-            score_find_additional(name,score,leaderboard_file_name)
+            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log)
             
         elif stage_match := (re.findall(".* \[DBG\] Stage (.*) ended for (.*) \(\d*\), time: (.*)", log_line)):
             logging.debug(f"found sector time on: {log_line.strip()}")
             leaderboard_file_name = str(stage_match[0][1]) + "-sector.txt"
             name = str(stage_match[0][1])
             score = str(stage_match [0][2])
-            score_find_additional(name,score,leaderboard_file_name)
+            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log)
 
 # finds car used, input method and converts laptimes to complete score finding
-def score_find_additional(name: str,score: float, leaderboard_file_name: str):
+def score_find_additional(name: str,score: float, leaderboard_file_name: str,index_log_line: int, selected_log: str, previous_log: str):
+
     name_allowed = check_name(name)
+
     if "-sector.txt" in leaderboard_file_name:
         minutes,seconds = score.split(":")
         score = float(float(minutes)*60000)+float(float(seconds)*1000)
+
     if name_allowed:
-        input_method = input_find(index_log_line,log_lines,name)
-        car = find_car(index_log_line,log_lines,name)
+        input_method = input_find(index_log_line, name, selected_log, previous_log)
+        car = find_car(index_log_line, name, selected_log, previous_log)
         write_score(name,score,car,input_method,leaderboard_file_name)
 
 # loop to find input method used by whoever got the score
-def input_find(index_log_line,log_lines,name):
-    logging.debug(f"Checking for input method for found score entry")      
-    
+def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: str):
+    logging.debug(f"Checking for input method for found score entry")
+
+    with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
+        selected_log_lines = log_file.readlines()
+
     input_method = "Unknown"
-    for index_input,input_line in enumerate(reversed(log_lines)):
-        if index_input > len(log_lines)-index_log_line and index_input < len(log_lines):
-            if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line)) != "None" and str(name) in input_line:
-                logging.debug(f"found input method on: {input_line.strip()} for server {file}")
+
+    for index_input, input_line in enumerate(reversed(selected_log_lines)):
+
+        if index_input > len(selected_log_lines)-index_log_line and index_input < len(selected_log_lines):
+
+            if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line))) and (str(name) in input_line):
+                logging.debug(f"found input method on: {input_line.strip()}")
                 
                 input_split = input_line.split("InputMethod=\"")[1]
                 input_method = input_split.split("\" Rain")[0]
-                logging.debug(f"input_method = {input_method}")
 
     if input_method == "Unknown":
         try:
@@ -159,8 +171,9 @@ def input_find(index_log_line,log_lines,name):
                 loglines_second_last = second_log_file.readlines()
             
             for second_input_line in reversed(loglines_second_last):
-                if str(re.search(".* \[INF\] CSP handshake received from.*InputMethod=.*", second_input_line)) != "None" and str(name) in input_line:
-                    logging.debug(f"found input method on: {second_input_line.strip()} for server {file}")
+                if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=.*", second_input_line))) and (str(name) in input_line):
+                    logging.debug(f"found input method on: {second_input_line.strip()}")
+
                     input_split = second_input_line.split("InputMethod=\"")[1]
                     input_method = input_split.split("\" Rain")[0]
 
@@ -173,26 +186,37 @@ def input_find(index_log_line,log_lines,name):
 
 # loop to find car driven by whoever got the score
 def find_car(index_log_line,log_lines,name):
-    logging.debug(f"Checking for car for found score entry for server {file}") 
-    car = "empty"
-    for index_car_line,car_line in enumerate(reversed(log_lines)):
-        if index_car_line > len(log_lines)-index_log_line and index_car_line < len(log_lines):
-            if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
-                logging.debug(f"found car on: {car_line.strip()} for server {file}")
+    logging.debug(f"Checking for car for found score entry") 
+
+    car = "unknown"
+
+    with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
+        selected_log_lines = log_file.readlines()
+
+    for index_car_line,car_line in enumerate(reversed(selected_log_lines)):
+
+        if index_car_line > len(selected_log_lines)-index_log_line and index_car_line < len(selected_log_lines):
+
+            if (car_match := (re.findall(".* \[INF\] .* has connected", car_line))) and (str(name) in car_line):
+                logging.debug(f"found car on: {car_line.strip()}")
+
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
                 car_seperated = car_array[0]
                 car = car_seperated.replace(',','')
                 logging.debug(f"car = {car}")
 
-    if car == "empty":
+    if car == "unknown":
+
         logging.debug(f"could not find car entry in current log for {str(name)}, trying in second latest log file {str(previous_log)}")
+
         with open(str(previous_log), encoding='utf-8', errors='ignore' "r") as f:
             loglines_second_last = f.readlines()
         
         for car_line in reversed(loglines_second_last):
-            if str(re.search(".* \[INF\] .* has connected", car_line)) != "None" and str(name) in car_line:
-                logging.debug(f"found car on: {car_line.strip()} for server {file}")
+            if (car_match := (re.findall(".* \[INF\] .* has connected", car_line))) and (str(name) in car_line):
+                
+                logging.debug(f"found car on: {car_line.strip()}")
                 car_split = car_line.split(" (")
                 car_array = car_split[2].split(")) has connected")
                 car_seperated = car_array[0]
@@ -1117,11 +1141,8 @@ while True:
                         if log_index < log_lookback : # checks if current logs are within the set amount of logs to look back at
                             previous_log = sorted_log_files[int(log_index + 1)]
                             logging.debug(f"Log file that is being read is: {str(selected_log)}")
-                            
-                            with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
-                                selected_log_lines = log_file.readlines()
 
-                            score_find(selected_log_lines)
+                            score_find(selected_log, previous_log)
                         
                         else: # breaks for loop if log loopback count has been exceeded
                             break
