@@ -158,24 +158,22 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
 
         if index_input > len(selected_log_lines)-index_log_line and index_input < len(selected_log_lines):
 
-            if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=.*", input_line))) and (str(name) in input_line):
+            if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", input_line))) and (str(name) in input_line):
                 logging.debug(f"found input method on: {input_line.strip()}")
-                
-                input_split = input_line.split("InputMethod=\"")[1]
-                input_method = input_split.split("\" Rain")[0]
+                input_method = input_match[0]
 
     if input_method == "Unknown":
+
         try:
             logging.debug(f"could not find input method in current log for {str(name)}, trying in second latest log file {str(previous_log)}")
+
             with open(str(previous_log), encoding='utf-8', errors='ignore' "r") as second_log_file:
                 loglines_second_last = second_log_file.readlines()
             
             for second_input_line in reversed(loglines_second_last):
-                if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=.*", second_input_line))) and (str(name) in input_line):
+                if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", second_input_line))) and (str(name) in input_line):
                     logging.debug(f"found input method on: {second_input_line.strip()}")
-
-                    input_split = second_input_line.split("InputMethod=\"")[1]
-                    input_method = input_split.split("\" Rain")[0]
+                    input_method = input_match[0]
 
         except:
             logging.debug(f"could not find input method for {str(name)}")
@@ -185,7 +183,7 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
     return(input_method)
 
 # loop to find car driven by whoever got the score
-def find_car(index_log_line,log_lines,name):
+def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: str):
     logging.debug(f"Checking for car for found score entry") 
 
     car = "unknown"
@@ -197,14 +195,9 @@ def find_car(index_log_line,log_lines,name):
 
         if index_car_line > len(selected_log_lines)-index_log_line and index_car_line < len(selected_log_lines):
 
-            if (car_match := (re.findall(".* \[INF\] .* has connected", car_line))) and (str(name) in car_line):
+            if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)\)\) has connected", car_line))) and (str(name) in car_line):
                 logging.debug(f"found car on: {car_line.strip()}")
-
-                car_split = car_line.split(" (")
-                car_array = car_split[2].split(")) has connected")
-                car_seperated = car_array[0]
-                car = car_seperated.replace(',','')
-                logging.debug(f"car = {car}")
+                car = car_match[0]
 
     if car == "unknown":
 
@@ -214,15 +207,11 @@ def find_car(index_log_line,log_lines,name):
             loglines_second_last = f.readlines()
         
         for car_line in reversed(loglines_second_last):
-            if (car_match := (re.findall(".* \[INF\] .* has connected", car_line))) and (str(name) in car_line):
-                
+            if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)\)\) has connected", car_line))) and (str(name) in car_line):
                 logging.debug(f"found car on: {car_line.strip()}")
-                car_split = car_line.split(" (")
-                car_array = car_split[2].split(")) has connected")
-                car_seperated = car_array[0]
-                car = car_seperated.replace(',','')
-                logging.debug(f"car = {car}")
+                car = car_match[0]
 
+    logging.debug(f"car = {car}")
     return(car)
 
 # # writes obtained scores to appropriate file
