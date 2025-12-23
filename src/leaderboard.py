@@ -34,28 +34,31 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str,str]:
     
     has_shmoovin = False
     shmoovin_type = ""
-    csp_extra_path = os.path.join(combined_server_path_rel, cfg, csp_extra_options.ini)
+    csp_extra_path = os.path.join(combined_server_path_rel, "cfg", "csp_extra_options.ini")
 
     if exists(csp_extra_path):
     
-        configp.read(csp_extra_path, encoding='utf-8')
-        scripttype = str(configp['SCRIPT_...']['SCRIPT'])
-        scripttype = scripttype.replace("'","")
+        try:
+            configp.read(csp_extra_path, encoding='utf-8')
+            scripttype = str(configp['SCRIPT_...']['SCRIPT'])
+            scripttype = scripttype.replace("'","")
 
-        if scripttype in overtakescript:
-            shmoovin_type = "Shmoovin overtake leaderboard"
-            has_shmoovin = True
-            logging.debug(f"shmoovin was found with the type = overtake")
+            if scripttype in overtakescript:
+                shmoovin_type = "Shmoovin overtake leaderboard"
+                has_shmoovin = True
+                logging.debug(f"shmoovin was found with the type = overtake")
 
-        elif scripttype in driftscript:
-            shmoovin_type = "Shmoovin drift leaderboard"
-            has_shmoovin = True
-            logging.debug(f"shmoovin was found with the type = drift")
+            elif scripttype in driftscript:
+                shmoovin_type = "Shmoovin drift leaderboard"
+                has_shmoovin = True
+                logging.debug(f"shmoovin was found with the type = drift")
+        except:
+            logging.debug("unable to find script entry in csp extra options")
 
     return(has_shmoovin,shmoovin_type)
 
 def get_class_cfg(combined_server_path_rel: str) -> any:
-    logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {file}")
+    logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {combined_server_path_rel}")
 
     classcfg = {"none": ["none"]}
     config_file_path = os.path.join(combined_server_path_rel,"discordbotcfg.json")
@@ -97,75 +100,47 @@ def has_score_file_check(file_name: str,combined_server_path_rel: str):
 ### score and time find ###
 
 # opens and loops trough last logfile to find score entries and writes them to the appropriate files
-def score_find():
-    logging.debug(f"Checking log file for server {file} for score entries")
-    for index_log_line,log_line in enumerate(log_lines):
+def score_find(selected_log_lines):
+    logging.debug(f"Checking log for score entries")
+    for index_log_line,log_line in enumerate(selected_log_lines):
 
-        try:
-            if str(re.search(".* \[INF\] CHAT:.* Drift.", log_line)) != "None":
-                # formats logline to variables to use for drift entry
-                loggin.debug(f"found score on: {log_line.strip()} for server {file}")
-                leaderboard_file_name = "leaderboard.txt"
-                init_split = log_line.split(" Drift:")
-                name_array = init_split[0].split("CHAT: ")
-                name_no_id = name_array[1].split(" (")[0]
-                name = name_no_id.replace(',','')
+        leaderboard_file_name = ""
+
+        if (shmoovin_match := re.findall(".* \[INF\] CHAT:(.*) \(\d*\): Drift: (\d*.\d*)", log_line)) or (shmoovin_match := re.findall(".* \[INF\] CHAT: (.*) \(\d*\): just scored a (\d*)", log_line)):
+            logging.debug(f"found shmoovin score on: {log_line.strip()}")
+            leaderboard_file_name = "leaderboard.txt"
+            name = str(shmoovin_match[0][0])
+            score = str(shmoovin_match[0][1])
+            score_find_additional(name,score,leaderboard_file_name)
             
-            elif str(re.search(".* \[INF\] CHAT:.* just scored a.*", log_line)) != "None": 
-                # formats logline to variables to use for overtake entry 
-                logging.debug(f"found score on: {log_line.strip()} for server {file}")
-                leaderboard_file_name = "leaderboard.txt"
-                init_split = log_line.split("): just scored a ")
-                name_array = init_split[0].split("CHAT: ") 
-                name_seperated = name_array[1].split(" (")[0]
-                name = name_seperated.replace(',','')
+        elif lap_match := (re.findall(".* \[INF\] Lap completed by (.*), 0 cuts, laptime (\d*)", log_line)):
+            logging.debug(f"found laptime on: {log_line.strip()}")
+            leaderboard_file_name = "laptimes.txt"
+            name = str(lap_match[0][0])
+            score = str(lap_match[0][1])
+            score_find_additional(name,score,leaderboard_file_name)
             
-            elif str(re.search(".* \[INF\] Lap completed by.* 0 cuts.*", log_line)) != "None":
-                # formats logline to variables to use for laptime entry
-                logging.debug(f"found laptime on: {log_line.strip()} for server {file}")
-                leaderboard_file_name = "laptimes.txt"
-                lap_split = log_line.split(" cuts, laptime ")
-                name_array = lap_split[0].split("Lap completed by ")
-                name_seperated = name_array[1].split(",")[0]
-                name = name_seperated.replace(',','')
-            
-            elif str(re.search(".* \[DBG\] Stage.*ended.*", log_line)) != "None":
-                # formats logline to variables to use for sector time entry
-                logging.debug(f"\nfound sector time on: {log_line.strip()} for server {file}")
-                sector_split = log_line.split("Stage ")
-                sector_name_array = sector_split[1].split(" ended for ")
-                leaderboard_file_name = sector_name_array[0] + "-sector.txt"
-                sector_driver_split = sector_name_array[1].split(" (")
-                name_seperated = sector_driver_split[0]
-                name = name_seperated.replace(',','')
-                logging.debug(f"name = {name}")
+        elif stage_match := (re.findall(".* \[DBG\] Stage (.*) ended for (.*) \(\d*\), time: (.*)", log_line)):
+            logging.debug(f"found sector time on: {log_line.strip()}")
+            leaderboard_file_name = str(stage_match[0][1]) + "-sector.txt"
+            name = str(stage_match[0][1])
+            score = str(stage_match [0][2])
+            score_find_additional(name,score,leaderboard_file_name)
 
-                name_allowed = check_name(name)
-                if name_allowed:
-                    sector_time = sector_driver_split[1].split("time: ")[1]
-                    minutes,seconds = sector_time.split(":")
-                    score = float(float(minutes)*60000)+float(float(seconds)*1000)
-                    input_method = input_find(index_log_line,log_lines,name)
-                    car = find_car(index_log_line,log_lines,name)
-                    has_score_file_check(leaderboard_file_name)
-                    write_score(name,score,car,input_method,leaderboard_file_name)
-
-            if leaderboard_file_name == "leaderboard.txt" or leaderboard_file_name == "laptimes.txt":
-                logging.debug(f"name = {name}")
-                name_allowed = check_name(name)
-                if name_allowed:
-                    score = float(init_split[1])
-                    logging.debug(f"score = {score}")
-                    input_method = input_find(index_log_line,log_lines,name)
-                    car = find_car(index_log_line,log_lines,name)
-                    write_score(name,score,car,input_method,leaderboard_file_name)
-
-        except Exception as e:
-            print("An exception occurred whilst reading logs for scores: ", str(e)) 
+# finds car used, input method and converts laptimes to complete score finding
+def score_find_additional(name: str,score: float, leaderboard_file_name: str):
+    name_allowed = check_name(name)
+    if "-sector.txt" in leaderboard_file_name:
+        minutes,seconds = score.split(":")
+        score = float(float(minutes)*60000)+float(float(seconds)*1000)
+    if name_allowed:
+        input_method = input_find(index_log_line,log_lines,name)
+        car = find_car(index_log_line,log_lines,name)
+        write_score(name,score,car,input_method,leaderboard_file_name)
 
 # loop to find input method used by whoever got the score
 def input_find(index_log_line,log_lines,name):
-    logging.debug(f"Checking for input method for found score entry for server {file}")      
+    logging.debug(f"Checking for input method for found score entry")      
     
     input_method = "Unknown"
     for index_input,input_line in enumerate(reversed(log_lines)):
@@ -370,7 +345,7 @@ def check_name(name_to_check):
 
 # sort scores in list per entry within 1 master list
 def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -> list:
-    logging.debug(f"attempting to sort scores with type {score_type} for server {file}") 
+    logging.debug(f"attempting to sort scores with type {score_type} for server {combined_server_path_rel}") 
     scores = []
     filtered_times = []
 
@@ -437,14 +412,14 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
                     filtered.append(score)
         filtered_times.append(filtered)
     
-    logging.debug(f"sorted scores for server {file} with type {score_type}")
+    logging.debug(f"sorted scores for server {combined_server_path_rel} with type {score_type}")
     logging.debug(f"filtered times = \n{filtered_times}")
     
     return(filtered_times)
 
 # formats laptimes if class configuration is present to str for use in webhook
 def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_short_name):
-    logging.debug(f"attempting to format scores with type {score_type} for output {doc_type} with classcfg {classcfg} for server {file}") 
+    logging.debug(f"attempting to format scores with type {score_type} for output {doc_type} with classcfg {classcfg} for server {combined_server_path_rel}") 
     finallist = []
     classlist = []
     finallist_html = []
@@ -518,7 +493,7 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
     if finalstr == "":
         finalstr = "currently empty"
         finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
-    logging.debug(f"formatted scores for server {file} with type {score_type} and destination {doc_type}")
+    logging.debug(f"formatted scores for server {combined_server_path_rel} with type {score_type} and destination {doc_type}")
     
     if doc_type == "discord":
         logging.debug(f"formatted scores for discord = \n{finalstr}")
@@ -571,66 +546,66 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
         os.mkdir("html")
     
     pre_html = ("""
-<html>
-<head>
-<style>
-body {
-    font-family: verdana; 
-    }
-.namebox {
-    width: 320px;
-    line-height:1%;
-    padding: 1px;
-    padding-right: 10px;
-    margin: 2px;
-    background-color: #000000;
-    color: white;
-    border-right-style: solid;
-    border-color: orange;
-    text-align: right;
-    }
-.classbox {
-    width: 320px;
-    line-height:100%;
-    padding: 1px;
-    padding-right: 10px;
-    margin: 2px;
-    background-color: orange;
-    color: white;
-    border-right-style: solid;
-    border-color: orange;
-    text-align: right;
-    }
-.sectorbox {
-    width: 320px;
-    line-height:100%;
-    padding: 1px;
-    padding-right: 10px;
-    margin: 2px;
-    background-color: #37474f;
-    color: white;
-    border-right-style: solid;
-    border-color: orange;
-    text-align: right;
-    }
-.titlebox {
-    width: 320px;
-    line-height:200%;
-    padding: 1px;
-    padding-right: 10px;
-    margin: 2px;
-    background-color: black;
-    color: white;
-    border-right-style: solid;
-    border-color: orange;
-    word-wrap: break-word;
-    text-align: right;
-    }
-</style>
-</head>
-<body>
-<div class="titlebox">
-""")
+    <html>
+    <head>
+    <style>
+    body {
+        font-family: verdana; 
+        }
+    .namebox {
+        width: 320px;
+        line-height:1%;
+        padding: 1px;
+        padding-right: 10px;
+        margin: 2px;
+        background-color: #000000;
+        color: white;
+        border-right-style: solid;
+        border-color: orange;
+        text-align: right;
+        }
+    .classbox {
+        width: 320px;
+        line-height:100%;
+        padding: 1px;
+        padding-right: 10px;
+        margin: 2px;
+        background-color: orange;
+        color: white;
+        border-right-style: solid;
+        border-color: orange;
+        text-align: right;
+        }
+    .sectorbox {
+        width: 320px;
+        line-height:100%;
+        padding: 1px;
+        padding-right: 10px;
+        margin: 2px;
+        background-color: #37474f;
+        color: white;
+        border-right-style: solid;
+        border-color: orange;
+        text-align: right;
+        }
+    .titlebox {
+        width: 320px;
+        line-height:200%;
+        padding: 1px;
+        padding-right: 10px;
+        margin: 2px;
+        background-color: black;
+        color: white;
+        border-right-style: solid;
+        border-color: orange;
+        word-wrap: break-word;
+        text-align: right;
+        }
+    </style>
+    </head>
+    <body>
+    <div class="titlebox">
+    """)
 
     refresh_script = "<script>setTimeout(function(){location.reload()},10000);</script>"
     
@@ -1135,12 +1110,12 @@ while True:
                 if server_type == "AssettoServer":
 
                     # sorts logs in a list by creation date with newest first
-                    sorted_log_files = sorted(glob.glob(os.path.join(combined_server_path_rel,logPath,"*")), key=os.path.getctime, reverse=True) 
+                    sorted_log_files = sorted(glob.glob(os.path.join(combined_server_path_rel,"logs","*")), key=os.path.getctime, reverse=True) 
                     
                     for log_index, selected_log in enumerate(sorted_log_files):
 
                         if log_index < log_lookback : # checks if current logs are within the set amount of logs to look back at
-                            previous_log = sorted_log_files[pint(log_index + 1)]
+                            previous_log = sorted_log_files[int(log_index + 1)]
                             logging.debug(f"Log file that is being read is: {str(selected_log)}")
                             
                             with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
@@ -1151,7 +1126,7 @@ while True:
                         else: # breaks for loop if log loopback count has been exceeded
                             break
 
-                    has_shmoovin, shmoovin_type = shmoovin_check()
+                    has_shmoovin, shmoovin_type = shmoovin_check(combined_server_path_rel)
                     
                     if has_shmoovin:
                         sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
