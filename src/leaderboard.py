@@ -350,10 +350,7 @@ def check_name(name_to_check):
         if banned_word.lower() in name_to_check.lower():
             allowed = False
             logging.debug(f"Found banned word: {banned_word} in the name: {name_to_check}\n")
-    
-        else:
-            logging.debug(f"{name_to_check} does not match any banned words\n")
-    
+            
     return(allowed)
 
 # sort scores in list per entry within 1 master list
