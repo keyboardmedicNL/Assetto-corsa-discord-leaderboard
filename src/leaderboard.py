@@ -26,8 +26,6 @@ configp = configparser.ConfigParser(strict=False)
 # variables
 logPath = "/logs/"
 
-# functions
-
 # checks if shmoovin is present in config
 def shmoovin_check(combined_server_path_rel: str) -> tuple[str,str]:
     logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
@@ -96,9 +94,6 @@ def has_score_file_check(file_name: str,combined_server_path_rel: str):
             score_file.write("")
         logging.debug(f"{score_file_path_rel} was not found so it was created")
 
-
-### score and time find ###
-
 # opens and loops trough last logfile to find score entries and writes them to the appropriate files
 def score_find(selected_log: str, previous_log: str):
     logging.debug(f"Checking log for score entries")
@@ -110,7 +105,9 @@ def score_find(selected_log: str, previous_log: str):
 
         leaderboard_file_name = ""
 
-        if (shmoovin_match := re.findall(".* \[INF\] CHAT:(.*) \(\d*\): Drift: (\d*.\d*)", log_line)) or (shmoovin_match := re.findall(".* \[INF\] CHAT: (.*) \(\d*\): just scored a (\d*)", log_line)):
+        if ((shmoovin_match := re.findall(".* \[INF\] CHAT:(.*) \(\d*\): Drift: (\d*.\d*)", log_line)) 
+        or (shmoovin_match := re.findall(".* \[INF\] CHAT: (.*) \(\d*\): just scored a (\d*)", log_line))):
+
             logging.debug(f"found shmoovin score on: {log_line.strip()}")
             leaderboard_file_name = "leaderboard.txt"
             name = str(shmoovin_match[0][0])
@@ -214,7 +211,7 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
     logging.debug(f"car = {car}")
     return(car)
 
-# # writes obtained scores to appropriate file
+# writes obtained scores to appropriate file
 def write_score(name,score,car,input_method,file_name):
     
     if verbose:
