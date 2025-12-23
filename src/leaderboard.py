@@ -155,7 +155,7 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
 
         if index_input > len(selected_log_lines)-index_log_line and index_input < len(selected_log_lines):
 
-            if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", input_line))) and (str(name) in input_line):
+            if (input_match := (re.findall(r".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", input_line))) and (str(name) in input_line):
                 logging.debug(f"found input method on: {input_line.strip()}")
                 input_method = input_match[0]
 
@@ -168,7 +168,7 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
                 loglines_second_last = second_log_file.readlines()
             
             for second_input_line in reversed(loglines_second_last):
-                if (input_match := (re.findall(".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", second_input_line))) and (str(name) in input_line):
+                if (input_match := (re.findall(r".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", second_input_line))) and (str(name) in input_line):
                     logging.debug(f"found input method on: {second_input_line.strip()}")
                     input_method = input_match[0]
 
