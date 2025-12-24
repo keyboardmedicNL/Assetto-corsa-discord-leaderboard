@@ -451,10 +451,8 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
         
         if scorelength > 0:
             
-            if doc_type == "discord" and str(classlist[i]) != "none":
+            if str(classlist[i]) != "none":
                 finallist.append(f"***{str(classlist[i])}***:\n")
-            
-            elif doc_type == "html" and str(classlist[i]) != "none":
                 finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classlist[i])}</h3>\n</div>\n")
         
         if scorelength >= leaderboardlimit:
@@ -477,33 +475,23 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
                 
                 score_input = classcore[3].strip()
                 
-                if doc_type == "discord":
-                    if show_input_discord == "true" and not use_short_name and server_type != "acserver":
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
-                    
-                    elif show_input_discord == "true" and use_short_name and server_type != "acserver":
-                        short_name = str(classcore[1])[0:6]
-                        finallist.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
-                    
-                    elif use_short_name:
-                        short_name = str(classcore[1])[0:6]
-                        finallist.append(f"{scorecounter}.{short_name} {score_format}\n")
-
-                    else:
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
+                if show_input_discord == "true" and not use_short_name and server_type != "acserver":
+                    finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
                 
-                elif doc_type == "html":
-                    if show_input == "true" and server_type != "acserver":
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
-                        short_name = str(classcore[1])[0:6]
-                        html_score_format = f"<b>{short_name}</b> - {score_input} - {score_format}"
-                        finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
-                    
-                    else:
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
-                        short_name = str(classcore[1])[0:6]
-                        html_score_format = f"<b>{short_name}</b> {score_format}"
-                        finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+                elif show_input_discord == "true" and use_short_name and server_type != "acserver":
+                    short_name = str(classcore[1])[0:6]
+                    finallist.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
+                
+                elif use_short_name:
+                    short_name = str(classcore[1])[0:6]
+                    finallist.append(f"{scorecounter}.{short_name} {score_format}\n")
+
+                else:
+                    finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
+                
+                short_name = str(classcore[1])[0:6]
+                html_score_format = f"<b>{short_name}</b> {score_format}"
+                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
     
     finalstr = "".join(finallist)
     finalstr_html = "".join(finallist_html)
@@ -511,18 +499,11 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
     if finalstr == "":
         finalstr = "currently empty"
         finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
-
-    logging.debug(f"formatted scores for server {combined_server_path_rel} with type {score_type} and destination {doc_type}")
     
-    if doc_type == "discord":
-        logging.debug(f"formatted scores for discord = \n{finalstr}")
+    logging.debug(f"formatted scores for discord = \n{finalstr}")
+    logging.debug(f"formatted scores for html = \n{finalstr_html}")
 
-        return(finalstr)
-    
-    elif doc_type == "html":
-        logging.debug(f"formatted scores for html = \n{finalstr_html}")
-
-        return(finalstr_html)
+    return(finalstr, finalstr_html)
 
 def format_sector(show_input_sector, use_short_name, combined_server_path_rel, classcfg):  
     server_files = os.listdir(combined_server_path_rel)
@@ -532,8 +513,7 @@ def format_sector(show_input_sector, use_short_name, combined_server_path_rel, c
     for sector_file in server_files:
         if "-sector.txt" in str(sector_file):
             scores = sort_score(sector_file ,classcfg, combined_server_path_rel)
-            times = format_scores(scores, classcfg, "discord", str(sector_file), show_input_sector, use_short_name)
-            times_html = format_scores(scores, classcfg, "html", str(sector_file), show_input_sector, use_short_name)
+            times, times_html = format_scores(scores, classcfg, "discord", str(sector_file), show_input_sector, use_short_name)
             sector_name = str(sector_file.split("-sector")[0])
             combined_sectors.append(f"\n**{sector_name}**\n")
             combined_sectors.append(times)
@@ -1156,16 +1136,14 @@ while True:
                     
                     if has_shmoovin:
                         sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                        finalstr = format_scores(sorted_scores, class_cfg, "discord","leaderboard", show_input,use_short_name)
-                        finalstr_html = format_scores(sorted_scores, class_cfg, "html", "leaderboard", show_input,use_short_name)
+                        finalstr, finalstr_html = format_scores(sorted_scores, class_cfg, "discord","leaderboard", show_input,use_short_name)
                     final_sector_str,final_sector_str_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
                 
                 elif server_type == "acServer":
                     findtimevanilla()
                 
                 times = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
-                finaltimes = format_scores(times, class_cfg, "discord","laptimes", show_input, use_short_name)
-                finaltimes_html = format_scores(times, class_cfg, "html", "laptimes", show_input, use_short_name) 
+                finaltimes, finaltimes_html = format_scores(times, class_cfg, "discord","laptimes", show_input, use_short_name)
                 
                 if final_sector_str != "" and "currently empty" in finaltimes.lower():
                     finaltimes = ""
@@ -1176,12 +1154,12 @@ while True:
                 
                 while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
                     print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
-                    finaltimes = format_scores(times,class_cfg,"discord","laptimes",False,True)
+                    finaltimes,_ = format_scores(times,class_cfg,"discord","laptimes",False,True)
                     final_sector_str,final_sector_str_html = format_sector(False,True)
                     finaltimes_combined = finaltimes + "\n" + final_sector_str
                     
                     if has_shmoovin == True:
-                        finalstr = format_scores(scores,class_cfg,"discord","leaderboard",False,True)
+                        finalstr,_ = format_scores(scores,class_cfg,"discord","leaderboard",False,True)
                     
                     if leaderboardlimit < 3:
                         finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
