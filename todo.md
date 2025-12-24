@@ -3,3 +3,4 @@
 - make cfg return false if no cfg found
 - split html and webhook logic to seperate modules
 - add color picker to embeds
+- refactor findtimevanilla

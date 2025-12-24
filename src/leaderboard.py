@@ -22,11 +22,6 @@ import config_loader
 config = config_loader.load_config
 configp = configparser.ConfigParser(strict=False)
 
-
-# variables
-logPath = "/logs/"
-
-# checks if shmoovin is present in config
 def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
     logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
     
@@ -142,7 +137,6 @@ def score_find_additional(name: str,score: float, leaderboard_file_name: str,ind
         car = find_car(index_log_line, name, selected_log, previous_log)
         write_score(name, score, car, input_method, leaderboard_file_name, combined_server_path_rel)
 
-# loop to find input method used by whoever got the score
 def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: str) -> str:
     logging.debug(f"Checking for input method for found score entry")
 
@@ -179,7 +173,6 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
     logging.debug(f"input_method = {input_method}")
     return(input_method)
 
-# loop to find car driven by whoever got the score
 def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: str) -> str:
     logging.debug(f"Checking for car for found score entry") 
 
@@ -211,7 +204,6 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
     logging.debug(f"car = {car}")
     return(car)
 
-# writes obtained scores to appropriate file
 def write_score(name, score, car, input_method, leaderboard_file_name, combined_server_path_rel):
 
     logging.debug(f"attempting to write found score to {leaderboard_file_name}") 
@@ -342,7 +334,6 @@ def check_name(name_to_check: str) -> bool:
             
     return(allowed)
 
-# sort scores in list per entry within 1 master list
 def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -> list:
     logging.debug(f"attempting to sort scores with type {score_type} for server {combined_server_path_rel}") 
     scores = []
@@ -430,7 +421,6 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
     logging.debug(f"filtered times = \n{filtered_times}")
     return(filtered_times)
 
-# formats laptimes if class configuration is present to str for use in webhook
 def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, use_short_name: bool) -> tuple[str, str]:
 
     logging.debug(f"attempting to format scores with type {score_type} with classcfg {classcfg}") 
@@ -522,7 +512,6 @@ def format_sector(show_input_sector: bool, use_short_name: bool, combined_server
     
     return(final_sector_str,final_sector_str_html)
 
-# formats and sends to html files for webserver
 def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type: str, combined_server_path_rel: str, server_folder: str):
     logging.debug(f"attempting to send formatted scores to html for server {combined_server_path_rel}") 
     configp.read(os.path.join(combined_server_path_rel,"server_cfg.ini"))
@@ -643,7 +632,6 @@ def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type:
                 logging.debug(f"{server_folder}-shmoovin.html was created with shmoovin scores")
                 logging.debug(f"html content:\n{shmoovin_html}\n")
 
-# formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
 def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type: str, combined_server_path_rel: str, main_loop_counter: int):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
@@ -983,7 +971,6 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
             if verbose:
                 logging.debug(f"{messageid} saved in file {main_loop_counter}.txt")
 
-# deletes unused discord messages
 def deletemessage(main_loop_counter: int):
     logging.debug(f"checking if messages need to be deleted if unused") 
     message_lst= os.listdir("config/messages")
@@ -1019,7 +1006,6 @@ def deletemessage(main_loop_counter: int):
             if verbose:
                 logging.debug(f"removing unused message file {message}")
 
-# deletes unused html files
 def delete_html(server_folders: list):
     logging.debug(f"checking if html files need to be deleted if unused")
     html_files = os.listdir("html")
