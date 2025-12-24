@@ -1,5 +1,5 @@
-- change string splits to regex
-- add multiple messages to allow longer leaderboards
-- use path.join
-- change cfgs to yaml
+- add multiple messages to allow longer leaderboards (split per leaderboard type) (configurable)
+- change cfgs to yaml (with backwards compat support for json)
 - make cfg return false if no cfg found
+- split html and webhook logic to seperate modules
+- add color picker to embeds
