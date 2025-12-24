@@ -529,12 +529,12 @@ def format_sector(show_input_sector, use_short_name, combined_server_path_rel, c
     combined_sectors = []
     combined_sectors_html = []
     
-    for files in server_files:
-        if "-sector.txt" in str(files):
-            scores = sort_score(files ,classcfg, combined_server_path_rel)
-            times = format_scores(scores, classcfg, "discord", str(files), show_input_sector, use_short_name)
-            times_html = format_scores(scores, classcfg, "html", str(files), show_input_sector, use_short_name)
-            sector_name = str(files.split("-sector")[0])
+    for sector_file in server_files:
+        if "-sector.txt" in str(sector_file):
+            scores = sort_score(sector_file ,classcfg, combined_server_path_rel)
+            times = format_scores(scores, classcfg, "discord", str(sector_file), show_input_sector, use_short_name)
+            times_html = format_scores(scores, classcfg, "html", str(sector_file), show_input_sector, use_short_name)
+            sector_name = str(sector_file.split("-sector")[0])
             combined_sectors.append(f"\n**{sector_name}**\n")
             combined_sectors.append(times)
             combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
@@ -546,14 +546,15 @@ def format_sector(show_input_sector, use_short_name, combined_server_path_rel, c
     return(final_sector_str,final_sector_str_html)
 
 # formats and sends to html files for webserver
-def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
-    logging.debug(f"attempting to send formatted scores to html for server {file}") 
-    configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
+def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type, combined_server_path_rel, server_folder):
+    logging.debug(f"attempting to send formatted scores to html for server {combined_server_path_rel}") 
+    configp.read(os.path.join(combined_server_path_rel,"server_cfg.ini"))
     name = str(configp['SERVER']['NAME'])
     showtimes = True
-    
-    if exists(f"{servers_path}/{file}//discordbotcfg.json"):
-        with open(f"{servers_path}/{file}//discordbotcfg.json") as config:
+    discordbotcfg_file = os.path.join(combined_server_path_rel,"discordbotcfg.json")
+
+    if exists(discordbotcfg_file):
+        with open(discordbotcfg_file) as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
@@ -632,37 +633,41 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     if showtimes:
         times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
         
-        if exists (f"html/{file}-times.html"):
-            with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
+        times_html_file = os.path.join("html",f"{server_folder}-times.html")
+
+        if exists (times_html_file):
+            with open(times_html_file , encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
                 html_lap_times.seek(0)
                 html_lap_times.truncate()
                 html_lap_times.write(times_html)
-                logging.debug(f"wrote laptimes to {file}-times.html for server {file}")
+                logging.debug(f"wrote laptimes to {server_folder}-times.html")
                 logging.debug(f"html content:\n{times_html}\n")
         else:
-            with open(f"html/{file}-times.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
+            with open(times_html_file , encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(times_html)
-                logging.debug(f"{file}-times.html was created with laptimes for server {file}")
+                logging.debug(f"{server_folder}-times.html was created with laptimes")
                 logging.debug(f"html content:\n{times_html}\n")
     
     if hasshmoovin:
         shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
         
-        if exists (f"html/{file}-shmoovin.html"):
-            with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
+        shmoovin_html_file = os.path.join("html",f"{server_folder}-shmoovin.html")
+        if exists (shmoovin_html_file):
+            with open(shmoovin_html_file, encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
                 html_lap_times.seek(0)
                 html_lap_times.truncate()
                 html_lap_times.write(shmoovin_html)
-                logging.debug(f"wrote shmoovin scores to {file}-shmoovin.html for server {file}")
+                logging.debug(f"wrote shmoovin scores to {server_folder}-shmoovin.html")
                 logging.debug(f"html content:\n{shmoovin_html}\n")
         else:
-            with open(f"html/{file}-shmoovin.html", encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
+            with open(shmoovin_html_file, encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
                 html_lap_times.write(shmoovin_html)
-                logging.debug(f"{file}-shmoovin.html was created with shmoovin scores for server {file}")
+
+                logging.debug(f"{server_folder}-shmoovin.html was created with shmoovin scores")
                 logging.debug(f"html content:\n{shmoovin_html}\n")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
-def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type,combined_server_path_rel):
+def sendtowebhook(finalstr, finaltimes, hasshmoovin, shmoovin_type, combined_server_path_rel):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -1038,21 +1043,20 @@ def deletemessage():
                 logging.debug(f"removing unused message file {message}")
 
 # deletes unused html files
-def delete_html():
+def delete_html(server_folders):
     logging.debug(f"checking if html files need to be deleted if unused")
     html_files = os.listdir("html")
     
     for html_file in html_files:
         html_matches_servername = False
         
-        for file in filenames:
+        for file in server_folders:
             if str(file) in str(html_file):
                 html_matches_servername = True
         
         if not html_matches_servername:
-            os.remove(f"html/{html_file}")
-            if verbose:
-                logging.debug(f"remove {html_file} because it is no longer used")
+            os.remove(os.path.join("html",html_file))
+            logging.debug(f"remove {html_file} because it is no longer used")
 
 
 
@@ -1187,11 +1191,11 @@ while True:
                 
                 finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
                 sendtowebhook(finalstr, finaltimes_combined, has_shmoovin,shmoovin_type, combined_server_path_rel)
-                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
+                sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type, combined_server_path_rel, server_folder)
             
         
         deletemessage()
-        delete_html()
+        delete_html(folders_in_servers_path )
     
     logging.debug(f"\nwaiting for {interval} minutes\n")
     time.sleep(interval*60)
