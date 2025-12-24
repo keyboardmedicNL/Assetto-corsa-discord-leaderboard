@@ -4,3 +4,4 @@
 - split html and webhook logic to seperate modules
 - add color picker to embeds
 - refactor findtimevanilla
+- only allow script to loop back all the way once on script start

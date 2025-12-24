@@ -261,11 +261,11 @@ def write_score(name, score, car, input_method, leaderboard_file_name, combined_
         logging.debug(f"content that was written to {leaderboard_file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
         
 # find laptimes for acServer sessions
-def findtimevanilla():
-    logging.debug(f"Checking for acServer.exe score entries for server{file}") 
+def findtimevanilla(combined_server_path_rel):
+    logging.debug(f"Checking for acServer.exe score entries for server{combined_server_path_rel}") 
     try:
-        latest_file = max(glob.glob(f"{servers_path}/{file}/results/*"), key=os.path.getctime)
-        logging.debug(f"results file that is being read is: {latest_file} for server {file}\n")
+        latest_file = max(glob.glob(os.path.join(combined_server_path_rel,"results"),"*"), key=os.path.getctime)
+        logging.debug(f"results file that is being read is: {latest_file}")
         
         with open(latest_file, encoding='utf-8', errors='ignore' "r") as f:
             resultsJson = json.load(f)
@@ -305,12 +305,12 @@ def findtimevanilla():
                                             entry = f"{car},{name},{score}\n"
                                             leaderboardlines[leaderboardlines.index(leaderboardline)] = ""
                                             leaderboardlinesnew.append(entry)
-                                            logging.debug(f"new laptime for {name} in {car} with time {score} for server {file}")
+                                            logging.debug(f"new laptime for {name} in {car} with time {score}")
                             
                             if wasfound == False:
                                 entry = f"{car},{name},{score}\n"
                                 leaderboardlinesnew.append(entry)
-                                logging.debug(f"new laptime for {name} in {car} with time {score} for server {file}")
+                                logging.debug(f"new laptime for {name} in {car} with time {score}")
                             
                             leaderboardlinescomb = leaderboardlines + leaderboardlinesnew
                             leaderboardwrite = ''.join(leaderboardlinescomb)
@@ -1089,7 +1089,7 @@ def main():
                         final_sector_str,final_sector_str_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
                     
                     elif server_type == "acServer":
-                        findtimevanilla()
+                        findtimevanilla(combined_server_path_rel)
                     
                     times = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
                     finaltimes, finaltimes_html = format_scores(times, class_cfg, "laptimes", show_input, use_short_name)
@@ -1124,7 +1124,7 @@ def main():
             deletemessage(main_loop_counter)
             delete_html(folders_in_servers_path )
         
-        logging.debug(f"\nwaiting for {interval} minutes\n")
+        logging.debug(f"waiting for {interval} minutes")
         time.sleep(interval*60)
 
 if __name__ == "__main__":
