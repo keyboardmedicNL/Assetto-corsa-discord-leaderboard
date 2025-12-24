@@ -27,7 +27,7 @@ configp = configparser.ConfigParser(strict=False)
 logPath = "/logs/"
 
 # checks if shmoovin is present in config
-def shmoovin_check(combined_server_path_rel: str) -> tuple[str,str]:
+def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
     logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
     
     has_shmoovin = False
@@ -143,7 +143,7 @@ def score_find_additional(name: str,score: float, leaderboard_file_name: str,ind
         write_score(name, score, car, input_method, leaderboard_file_name, combined_server_path_rel)
 
 # loop to find input method used by whoever got the score
-def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: str):
+def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: str) -> str:
     logging.debug(f"Checking for input method for found score entry")
 
     with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
@@ -180,7 +180,7 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
     return(input_method)
 
 # loop to find car driven by whoever got the score
-def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: str):
+def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: str) -> str:
     logging.debug(f"Checking for car for found score entry") 
 
     car = "unknown"
@@ -331,7 +331,7 @@ def findtimevanilla():
         logging.debug("An exception occurred attempting to find scores for a ACServer.exe server: ", str(e))
 
 # checks if name is on banned names list
-def check_name(name_to_check):
+def check_name(name_to_check: str) -> bool:
     logging.debug(f"checking {name_to_check} to see if it matches any banned words")
     logging.debug(f"list of banned words to check against:\n{banned_words}")
     allowed = True
@@ -431,9 +431,9 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
     return(filtered_times)
 
 # formats laptimes if class configuration is present to str for use in webhook
-def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_short_name):
+def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, use_short_name: bool) -> tuple[str, str]:
 
-    logging.debug(f"attempting to format scores with type {score_type} for output {doc_type} with classcfg {classcfg} for server {combined_server_path_rel}") 
+    logging.debug(f"attempting to format scores with type {score_type} with classcfg {classcfg} for server {combined_server_path_rel}") 
     
     finallist = []
     classlist = []
@@ -502,7 +502,7 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
 
     return(finalstr, finalstr_html)
 
-def format_sector(show_input_sector, use_short_name, combined_server_path_rel, classcfg):  
+def format_sector(show_input_sector: bool, use_short_name: bool, combined_server_path_rel: str, classcfg) -> tuple[str, str]:
     server_files = os.listdir(combined_server_path_rel)
     combined_sectors = []
     combined_sectors_html = []
@@ -510,7 +510,7 @@ def format_sector(show_input_sector, use_short_name, combined_server_path_rel, c
     for sector_file in server_files:
         if "-sector.txt" in str(sector_file):
             scores = sort_score(sector_file ,classcfg, combined_server_path_rel)
-            times, times_html = format_scores(scores, classcfg, "discord", str(sector_file), show_input_sector, use_short_name)
+            times, times_html = format_scores(scores, classcfg, str(sector_file), show_input_sector, use_short_name)
             sector_name = str(sector_file.split("-sector")[0])
             combined_sectors.append(f"\n**{sector_name}**\n")
             combined_sectors.append(times)
@@ -523,7 +523,7 @@ def format_sector(show_input_sector, use_short_name, combined_server_path_rel, c
     return(final_sector_str,final_sector_str_html)
 
 # formats and sends to html files for webserver
-def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type, combined_server_path_rel, server_folder):
+def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type: str, combined_server_path_rel: str, server_folder: str):
     logging.debug(f"attempting to send formatted scores to html for server {combined_server_path_rel}") 
     configp.read(os.path.join(combined_server_path_rel,"server_cfg.ini"))
     name = str(configp['SERVER']['NAME'])
@@ -644,7 +644,7 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type, combined_server_pa
                 logging.debug(f"html content:\n{shmoovin_html}\n")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
-def sendtowebhook(finalstr, finaltimes, hasshmoovin, shmoovin_type, combined_server_path_rel):
+def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type: str, combined_server_path_rel: str):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -1020,7 +1020,7 @@ def deletemessage():
                 logging.debug(f"removing unused message file {message}")
 
 # deletes unused html files
-def delete_html(server_folders):
+def delete_html(server_folders: list):
     logging.debug(f"checking if html files need to be deleted if unused")
     html_files = os.listdir("html")
     
@@ -1136,14 +1136,14 @@ while True:
                     
                     if has_shmoovin:
                         sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                        finalstr, finalstr_html = format_scores(sorted_scores, class_cfg, "discord","leaderboard", show_input,use_short_name)
+                        finalstr, finalstr_html = format_scores(sorted_scores, class_cfg, "leaderboard", show_input,use_short_name)
                     final_sector_str,final_sector_str_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
                 
                 elif server_type == "acServer":
                     findtimevanilla()
                 
                 times = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
-                finaltimes, finaltimes_html = format_scores(times, class_cfg, "discord","laptimes", show_input, use_short_name)
+                finaltimes, finaltimes_html = format_scores(times, class_cfg, "laptimes", show_input, use_short_name)
                 
                 if final_sector_str != "" and "currently empty" in finaltimes.lower():
                     finaltimes = ""
@@ -1154,12 +1154,12 @@ while True:
                 
                 while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
                     print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
-                    finaltimes,_ = format_scores(times,class_cfg,"discord","laptimes",False,True)
-                    final_sector_str,final_sector_str_html = format_sector(False,True)
+                    finaltimes,_ = format_scores(times, class_cfg, "laptimes", False, True)
+                    final_sector_str,final_sector_str_html = format_sector(False, True, combined_server_path_rel, class_cfg)
                     finaltimes_combined = finaltimes + "\n" + final_sector_str
                     
                     if has_shmoovin == True:
-                        finalstr,_ = format_scores(scores,class_cfg,"discord","leaderboard",False,True)
+                        finalstr,_ = format_scores(scores, class_cfg, "leaderboard", False, True)
                     
                     if leaderboardlimit < 3:
                         finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
