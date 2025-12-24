@@ -330,8 +330,6 @@ def findtimevanilla():
     except Exception as e:
         logging.debug("An exception occurred attempting to find scores for a ACServer.exe server: ", str(e))
 
-### sorting and formatting ####
-
 # checks if name is on banned names list
 def check_name(name_to_check):
     logging.debug(f"checking {name_to_check} to see if it matches any banned words")
@@ -431,7 +429,6 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
     logging.debug(f"sorted scores for server {combined_server_path_rel} with type {score_type}")
     logging.debug(f"filtered times = \n{filtered_times}")
     return(filtered_times)
-    
 
 # formats laptimes if class configuration is present to str for use in webhook
 def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_short_name):
@@ -1038,8 +1035,6 @@ def delete_html(server_folders):
             os.remove(os.path.join("html",html_file))
             logging.debug(f"remove {html_file} because it is no longer used")
 
-
-
 ##### main code ####
 
 # load config
@@ -1075,7 +1070,7 @@ with open("config/config.json") as config:
     shmoovinurl = driftscript + overtakescript
     banned_words = configJson["banned_words"]
     log_lookback = int(configJson["log_lookback"])
-    print("succesfully loaded config\n")
+    logging.debug("succesfully loaded config\n")
 
 # main loop 
 logging.info("Starting assetto discord leaderboards...")
@@ -1123,8 +1118,13 @@ while True:
                     
                     for log_index, selected_log in enumerate(sorted_log_files):
 
-                        if log_index < log_lookback : # checks if current logs are within the set amount of logs to look back at
-                            previous_log = sorted_log_files[int(log_index + 1)]
+                        if log_index < log_lookback or log_index != (len(sorted_log_files)-1) : # checks if current logs are within the set amount of logs to look back at
+                            
+                            if log_index != (len(sorted_log_files)-1):
+                                previous_log = sorted_log_files[int(log_index + 1)]
+                            else:
+                                previous_log = selected_log
+
                             logging.debug(f"Log file that is being read is: {str(selected_log)}")
 
                             score_find(selected_log, previous_log, combined_server_path_rel)
