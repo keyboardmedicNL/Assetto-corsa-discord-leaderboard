@@ -95,7 +95,7 @@ def has_score_file_check(file_name: str,combined_server_path_rel: str):
         logging.debug(f"{score_file_path_rel} was not found so it was created")
 
 # opens and loops trough last logfile to find score entries and writes them to the appropriate files
-def score_find(selected_log: str, previous_log: str):
+def score_find(selected_log: str, previous_log: str, combined_server_path_rel: str):
     logging.debug(f"Checking log for score entries")
 
     with open(str(selected_log), encoding='utf-8', errors='ignore' "r") as log_file:
@@ -112,24 +112,24 @@ def score_find(selected_log: str, previous_log: str):
             leaderboard_file_name = "leaderboard.txt"
             name = str(shmoovin_match[0][0])
             score = str(shmoovin_match[0][1])
-            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log)
+            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log, combined_server_path_rel)
             
         elif lap_match := (re.findall(".* \[INF\] Lap completed by (.*), 0 cuts, laptime (\d*)", log_line)):
             logging.debug(f"found laptime on: {log_line.strip()}")
             leaderboard_file_name = "laptimes.txt"
             name = str(lap_match[0][0])
             score = str(lap_match[0][1])
-            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log)
+            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log, combined_server_path_rel)
             
         elif stage_match := (re.findall(".* \[DBG\] Stage (.*) ended for (.*) \(\d*\), time: (.*)", log_line)):
             logging.debug(f"found sector time on: {log_line.strip()}")
-            leaderboard_file_name = str(stage_match[0][1]) + "-sector.txt"
+            leaderboard_file_name = str(stage_match[0][0]) + "-sector.txt"
             name = str(stage_match[0][1])
             score = str(stage_match [0][2])
-            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log)
+            score_find_additional(name, score, leaderboard_file_name, index_log_line, selected_log, previous_log, combined_server_path_rel)
 
 # finds car used, input method and converts laptimes to complete score finding
-def score_find_additional(name: str,score: float, leaderboard_file_name: str,index_log_line: int, selected_log: str, previous_log: str):
+def score_find_additional(name: str,score: float, leaderboard_file_name: str,index_log_line: int, selected_log: str, previous_log: str, combined_server_path_rel: str):
 
     name_allowed = check_name(name)
 
@@ -140,7 +140,7 @@ def score_find_additional(name: str,score: float, leaderboard_file_name: str,ind
     if name_allowed:
         input_method = input_find(index_log_line, name, selected_log, previous_log)
         car = find_car(index_log_line, name, selected_log, previous_log)
-        write_score(name,score,car,input_method,leaderboard_file_name)
+        write_score(name, score, car, input_method, leaderboard_file_name, combined_server_path_rel)
 
 # loop to find input method used by whoever got the score
 def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: str):
@@ -192,7 +192,7 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
 
         if index_car_line > len(selected_log_lines)-index_log_line and index_car_line < len(selected_log_lines):
 
-            if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)\)\) has connected", car_line))) and (str(name) in car_line):
+            if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)-.* has connected", car_line))) and (str(name) in car_line):
                 logging.debug(f"found car on: {car_line.strip()}")
                 car = car_match[0]
 
@@ -204,7 +204,7 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
             loglines_second_last = f.readlines()
         
         for car_line in reversed(loglines_second_last):
-            if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)\)\) has connected", car_line))) and (str(name) in car_line):
+            if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)-.* has connected", car_line))) and (str(name) in car_line):
                 logging.debug(f"found car on: {car_line.strip()}")
                 car = car_match[0]
 
@@ -212,68 +212,62 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
     return(car)
 
 # writes obtained scores to appropriate file
-def write_score(name,score,car,input_method,file_name):
-    
-    if verbose:
-        print(f"attempting to write found score to {file_name} for server {file}") 
-    
-    with open(f"{servers_path}/{file}/{file_name}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
-        
-        try:
-            score_file_lines_new = []
-            was_found = False
-            score_file_lines = score_file.readlines()
-            
-            for score_file_line in score_file_lines:
-                
-                # extra logic to avoid issues when manually editing laptimes.txt
-                if str(score_file_line) == "\n":
-                    score_file_lines[score_file_lines.index(score_file_line)] = ""
-                
-                if "\n" not in str(score_file_line):
-                    score_file_lines[score_file_lines.index(score_file_line)] = score_file_line+"\n"
-                
-                # actual logic to save laptime to laptimes.txt
-                if name in score_file_line and car in score_file_line:
-                        was_found = True
-                        old_score = score_file_line.split(',')[2]
-                        
-                        if file_name == "leaderboard.txt":
-                            
-                            if score > float(old_score):
-                                entry = f"{car},{name},{score},{input_method}\n"
-                                score_file_lines[score_file_lines.index(score_file_line)] = ""
-                                score_file_lines_new.append(entry)
-                                
-                                if verbose:
-                                    print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
-                        else:
-                            
-                            if score < float(old_score):
-                                entry = f"{car},{name},{score},{input_method}\n"
-                                score_file_lines[score_file_lines.index(score_file_line)] = ""
-                                score_file_lines_new.append(entry)
-                                
-                                if verbose:
-                                    print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
-            
-            if was_found == False:
-                entry = f"{car},{name},{score},{input_method}\n"
-                score_file_lines_new.append(entry)
-                
-                if verbose:
-                    print(f"new record for {name} in {car} with {score} and input method {input_method} for file {file_name} for server {file}")
-            
-            score_file.seek(0)
-            score_file.truncate()
-            score_file.write(''.join(score_file_lines + score_file_lines_new))
-            
-            if verbose:
-                    print(f"content that was written to {file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
-        
-        except Exception as e:
-            print("An exception occurred whilst trying to write a score to file: ", str(e)) 
+def write_score(name, score, car, input_method, leaderboard_file_name, combined_server_path_rel):
 
+    logging.debug(f"attempting to write found score to {leaderboard_file_name}") 
+    
+    try:
+         with open(f"{os.path.join(combined_server_path_rel,leaderboard_file_name)}", encoding='utf-8', errors='ignore', mode="x"):
+            pass
+    except Exception as e:
+        logging.debug(f"unable to create file {leaderboard_file_name} with exception {e}")
+
+    with open(f"{os.path.join(combined_server_path_rel,leaderboard_file_name)}", encoding='utf-8', errors='ignore', mode="r+") as score_file:
+        
+        score_file_lines_new = []
+        was_found = False
+        score_file_lines = score_file.readlines()
+        
+        for score_file_line in score_file_lines:
+            
+            # extra logic to avoid issues when manually editing laptimes.txt
+            if str(score_file_line) == "\n":
+                score_file_lines[score_file_lines.index(score_file_line)] = ""
+            
+            if "\n" not in str(score_file_line):
+                score_file_lines[score_file_lines.index(score_file_line)] = score_file_line+"\n"
+            
+            # actual logic to save laptime to laptimes.txt
+            if name in score_file_line and car in score_file_line:
+                    was_found = True
+                    old_score = score_file_line.split(',')[2]
+                    
+                    if leaderboard_file_name == "leaderboard.txt" and float(score) > float(old_score):
+                        entry = f"{car},{name},{score},{input_method}\n"
+                        score_file_lines[score_file_lines.index(score_file_line)] = ""
+                        score_file_lines_new.append(entry)
+                        
+                        logging.debug(f"new record for {name} in {car} with {score} and input method {input_method} for file {leaderboard_file_name}")
+
+                    elif leaderboard_file_name != "leaderboard.txt" and float(score) < float(old_score):
+                        entry = f"{car},{name},{score},{input_method}\n"
+                        score_file_lines[score_file_lines.index(score_file_line)] = ""
+                        score_file_lines_new.append(entry)
+                        
+                        logging.debug(f"new record for {name} in {car} with {score} and input method {input_method} for file {leaderboard_file_name}")
+        
+        if was_found == False:
+            entry = f"{car},{name},{score},{input_method}\n"
+            score_file_lines_new.append(entry)
+            
+        logging.debug(f"new record for {name} in {car} with {score} and input method {input_method} for file {leaderboard_file_name}")
+        
+        score_file.seek(0)
+        score_file.truncate()
+        score_file.write(''.join(score_file_lines + score_file_lines_new))
+        
+        logging.debug(f"content that was written to {leaderboard_file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
+        
 # find laptimes for acServer sessions
 def findtimevanilla():
     logging.debug(f"Checking for acServer.exe score entries for server{file}") 
@@ -357,7 +351,9 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
     filtered_times = []
 
     with open(os.path.join(combined_server_path_rel,score_type), 'r', encoding='utf-8', errors='ignore') as score_file:
+
         for line in score_file:
+            # parses entry from leaderboard.txt into seperate vars for comparison later
             if score_type == "leaderboard.txt":
                 try:
                     car, name, score, input_method = line.split(',')
@@ -371,6 +367,8 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
                         name, score,= line.split(',')
                         input_method = "Unknown"
                         car = "Unknown"
+
+            # parses entry from laptimes or sector times into seperate vars for comparison later
             else:
                 try:
                     car, name, score, input_method = line.split(',')
@@ -380,24 +378,32 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
                     input_method = "Unknown"
             
             score = score.strip()
+
             name_allowed_to_sort = check_name(name)
             
             if name_allowed_to_sort:
                 scores.append([car, name, score, input_method])
     
+    # sorting for shmoovin scores
     if score_type == "leaderboard.txt":
         scores.sort(key=lambda s: float(s[2]), reverse = True)
-    
+
+    # sorting for laptimes and sector times
     else:
         scores.sort(key=lambda s: float(s[2]), reverse = False)
     
+    # sorts scores based on class defined in discordbotcfg
     for class_selected in classcfg:
         filtered = []
         
         for score in scores:
-            carname_split = score[0].split("-")
-            # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over
-            
+            # old fix to allow for backwards compatibility with old leaderboard.txt wich stored full car name and skin
+            try:
+                carname_split = score[0].split("-")
+            except:
+                carname_split = score[0]
+
+            # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over, adds all cars to one big pool if classcfg does not exsist
             if str(carname_split[0]) in str(classcfg[class_selected]) or class_selected == "none":
                 allready_in = False
                 
@@ -406,10 +412,12 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
                     if str(score[1]) in str(entry):
                         allready_in = True
                         
+                        # logic for shmoovin scores
                         if score_type == "leaderboard.txt":
                             if float(score[2]) > float(entry[2]):
                                 del filtered[index_entry]
                                 filtered.append(score)
+                        # logic for laptimes and sector times
                         else:
                             if float(score[2]) < float(entry[2]):
                                 del filtered[index_entry]
@@ -417,16 +425,19 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
                 
                 if not allready_in:
                     filtered.append(score)
-        filtered_times.append(filtered)
+
+    filtered_times.append(filtered)
     
     logging.debug(f"sorted scores for server {combined_server_path_rel} with type {score_type}")
     logging.debug(f"filtered times = \n{filtered_times}")
-    
     return(filtered_times)
+    
 
 # formats laptimes if class configuration is present to str for use in webhook
 def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_short_name):
+
     logging.debug(f"attempting to format scores with type {score_type} for output {doc_type} with classcfg {classcfg} for server {combined_server_path_rel}") 
+    
     finallist = []
     classlist = []
     finallist_html = []
@@ -474,12 +485,12 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
                         short_name = str(classcore[1])[0:6]
                         finallist.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
                     
-                    elif not use_short_name:
-                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
-                    
                     elif use_short_name:
                         short_name = str(classcore[1])[0:6]
                         finallist.append(f"{scorecounter}.{short_name} {score_format}\n")
+
+                    else:
+                        finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
                 
                 elif doc_type == "html":
                     if show_input == "true" and server_type != "acserver":
@@ -500,27 +511,29 @@ def format_scores(scores,classcfg,doc_type,score_type,show_input_discord,use_sho
     if finalstr == "":
         finalstr = "currently empty"
         finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
+
     logging.debug(f"formatted scores for server {combined_server_path_rel} with type {score_type} and destination {doc_type}")
     
     if doc_type == "discord":
         logging.debug(f"formatted scores for discord = \n{finalstr}")
+
         return(finalstr)
     
     elif doc_type == "html":
-        if verbose:
-            logging.debug(f"formatted scores for html = \n{finalstr_html}")
+        logging.debug(f"formatted scores for html = \n{finalstr_html}")
+
         return(finalstr_html)
 
-def format_sector(show_input_sector,use_short_name):  
-    server_files = os.listdir(str(f"{servers_path}/{file}"))
+def format_sector(show_input_sector, use_short_name, combined_server_path_rel, classcfg):  
+    server_files = os.listdir(combined_server_path_rel)
     combined_sectors = []
     combined_sectors_html = []
     
     for files in server_files:
         if "-sector.txt" in str(files):
-            scores = sort_score(files,classcfg)
-            times = format_scores(scores,classcfg,"discord",str(files),show_input_sector,use_short_name)
-            times_html = format_scores(scores,classcfg,"html",str(files),show_input_sector,use_short_name)
+            scores = sort_score(files ,classcfg, combined_server_path_rel)
+            times = format_scores(scores, classcfg, "discord", str(files), show_input_sector, use_short_name)
+            times_html = format_scores(scores, classcfg, "html", str(files), show_input_sector, use_short_name)
             sector_name = str(files.split("-sector")[0])
             combined_sectors.append(f"\n**{sector_name}**\n")
             combined_sectors.append(times)
@@ -534,7 +547,7 @@ def format_sector(show_input_sector,use_short_name):
 
 # formats and sends to html files for webserver
 def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
-    logging.debug(f"\nattempting to send formatted scores to html for server {file}") 
+    logging.debug(f"attempting to send formatted scores to html for server {file}") 
     configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
     name = str(configp['SERVER']['NAME'])
     showtimes = True
@@ -649,15 +662,20 @@ def sendtohtml(finalstr,finaltimes,hasshmoovin,shmoovin_type):
                 logging.debug(f"html content:\n{shmoovin_html}\n")
 
 # formats message to send to discord, will send a message if it does not exsist yet for the server or update otherwise
-def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
-    logging.debug(f"attempting to send scores to discord for server {file}") 
-    configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
+def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type,combined_server_path_rel):
+    logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
+
+    server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
+
+    configp.read(server_cfg_file)
     name = str(configp['SERVER']['NAME'])
+
     # checks if laptimes and shmoovin score should be shown
     showtimes = True
-    
-    if exists(f"{servers_path}/{file}//discordbotcfg.json"):
-        with open(f"{servers_path}/{file}//discordbotcfg.json") as config:
+    discordbotcfg_file = os.path.join(combined_server_path_rel,"discordbotcfg.json")
+
+    if exists(discordbotcfg_file):
+        with open(discordbotcfg_file) as config:
             configJson = json.load(config)
         try:
             showtimes = configJson["showlaptimes"]
@@ -674,13 +692,13 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
     
     # checks if full server status should be shown and formats data for it
     if onlyleaderboards.lower() == "false":
-        configp.read(f"{servers_path}/{file}/cfg/server_cfg.ini")
+        configp.read(server_cfg_file)
         httpport = str(configp['SERVER']['HTTP_PORT'])
         serverhttp = f"{serveradress}:{httpport}"
         try:
             rl = requests.get(f"http://{serverhttp}/INFO")
             if verbose:
-                logging.debug(f"server info response is: {rl} for server {file}")
+                logging.debug(f"server info response is: {rl} for server {combined_server_path_rel}")
             if "200" in str(rl):
                 rljson = rl.json()
                 clients = rljson["clients"]
@@ -699,11 +717,11 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             maxplayers = "NA"
             clients = "NA"
             track = "NA"
-            logging.debug(f"an exception occured for server {file} {e}")
+            logging.debug(f"an exception occured for server {combined_server_path_rel} {e}")
     
     # returns correct format based on selected parameters
     if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes :
-        logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {file}")
+        logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -746,7 +764,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             ]}
 
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and showtimes:
-        logging.debug(f"posting/updating message with full server info and laptimes for server {file}")
+        logging.debug(f"posting/updating message with full server info and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -785,7 +803,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             ]}
     
     elif onlyleaderboards.lower() == "false" and not hasshmoovin and not showtimes:
-        logging.debug(f"posting/updating message with full server info for server {file}")
+        logging.debug(f"posting/updating message with full server info for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -820,7 +838,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             ]}
     
     elif onlyleaderboards.lower() == "false" and hasshmoovin  and not showtimes:
-        logging.debug(f"posting/updating message with full server info and shmoovin for server {file}")
+        logging.debug(f"posting/updating message with full server info and shmoovin for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -859,7 +877,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             ]}
     
     elif onlyleaderboards.lower() == "true" and hasshmoovin  and showtimes:
-        logging.debug(f"posting/updating message with shmoovin and laptimes for server {file}")
+        logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -883,7 +901,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             ]}
     
     elif onlyleaderboards.lower() == "true" and not hasshmoovin and showtimes:
-        logging.debug(f"posting/updating message with laptimes for server {file}")
+        logging.debug(f"posting/updating message with laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -903,7 +921,7 @@ def sendtowebhook(finalstr,finaltimes,hasshmoovin,shmoovin_type):
             ]}
     
     elif onlyleaderboards.lower() == "true" and hasshmoovin  and not showtimes:
-        logging.debug(f"posting/updating message with shmoovin for server {file}")
+        logging.debug(f"posting/updating message with shmoovin for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
@@ -1125,7 +1143,7 @@ while True:
                             previous_log = sorted_log_files[int(log_index + 1)]
                             logging.debug(f"Log file that is being read is: {str(selected_log)}")
 
-                            score_find(selected_log, previous_log)
+                            score_find(selected_log, previous_log, combined_server_path_rel)
                         
                         else: # breaks for loop if log loopback count has been exceeded
                             break
@@ -1134,16 +1152,16 @@ while True:
                     
                     if has_shmoovin:
                         sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                        finalstr = format_scores(sorted_scores,class_cfg,"discord","leaderboard",show_input,use_short_name)
-                        finalstr_html = format_scores(scores,class_cfg,"html","leaderboard",show_input,use_short_name)
-                    final_sector_str,final_sector_str_html = format_sector(show_input,use_short_name)
+                        finalstr = format_scores(sorted_scores, class_cfg, "discord","leaderboard", show_input,use_short_name)
+                        finalstr_html = format_scores(sorted_scores, class_cfg, "html", "leaderboard", show_input,use_short_name)
+                    final_sector_str,final_sector_str_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
                 
                 elif server_type == "acServer":
                     findtimevanilla()
                 
-                times = sort_score("laptimes.txt",class_cfg)
-                finaltimes = format_scores(times,class_cfg,"discord","laptimes",show_input,use_short_name)
-                finaltimes_html = format_scores(times,class_cfg,"html","laptimes",show_input,use_short_name) 
+                times = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
+                finaltimes = format_scores(times, class_cfg, "discord","laptimes", show_input, use_short_name)
+                finaltimes_html = format_scores(times, class_cfg, "html", "laptimes", show_input, use_short_name) 
                 
                 if final_sector_str != "" and "currently empty" in finaltimes.lower():
                     finaltimes = ""
@@ -1168,7 +1186,7 @@ while True:
                     leaderboardlimit = leaderboardlimit - 1
                 
                 finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
-                sendtowebhook(finalstr,finaltimes_combined,has_shmoovin,shmoovin_type)
+                sendtowebhook(finalstr, finaltimes_combined, has_shmoovin,shmoovin_type, combined_server_path_rel)
                 sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type)
             
         
