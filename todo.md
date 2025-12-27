@@ -1,0 +1,1 @@
+- ignore fucked entries in leaderboard files

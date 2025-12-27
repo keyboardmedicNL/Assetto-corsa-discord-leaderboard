@@ -1,0 +1,24 @@
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  standard:
+    format: "%(asctime)s %(levelname)s: [%(module)s.%(funcName)s:%(lineno)d]: %(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO #set to DEBUG for debugging, INFO for normal console logging
+    formatter: standard
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.FileHandler
+    level: INFO #set to DEBUG for debugging. INFO for normal console logging
+    formatter: standard
+    filename: ./config/assetto_bot.log
+    encoding: utf-8
+
+root:
+  level: INFO # change this value to DEBUG for debugging messages in log, INFO for normal console logging
+  handlers: [console, file]

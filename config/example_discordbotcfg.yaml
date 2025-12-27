@@ -1,0 +1,18 @@
+show_sectors: true
+show_shmoovin: false
+show_times: true
+class_cfg:
+  '2004':
+  - ks_ferrari_f2004
+  '2010':
+  - lotus_exos_125_s1
+  '2017':
+  - ks_ferrari_sf70h
+  60s:
+  - ks_ferrari_312_67
+  - lotus_49
+  70s:
+  - ferrari_312t
+  - ks_lotus_72d
+  80s:
+  - lotus_98t
