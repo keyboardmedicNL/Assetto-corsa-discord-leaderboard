@@ -771,32 +771,18 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             messageid = str(File.readline())
             logging.debug(f"messageid: {messageid} read from {main_loop_counter}.txt")
             logging.debug(f"json data being send to webhook is: \n{data}\n")
-        
-        rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
-        time.sleep(1)
 
-        if "200" in str(rl):
-            logging.debug(f"discord message {messageid} updated\n")
-        
-        else:
-            logging.debug(f"discord message {messageid} could not be updated with status code {rl}\n") 
+        request_url_combined = f"{webhookurl}/messages/{messageid}"
+        requests_error_handler.handle_request_error(request_type="patch", request_url=request_url_combined, request_json=data, request_params={'wait': 'true'})
+
     # creates leaderboard message if not allready created
     
     else:
         logging.debug(f"json data being send to webhook is: \n{data}\n")
 
-        rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
-        time.sleep(1)
-        
-        rljson = rl.json()
-        messageid = rljson["id"]
-        
-        if "200" in str(rl):
-            logging.debug(f"discord message {messageid} posted\n")
-        
-        else:
-            logging.debug(f"discord message {messageid} could not be posted with status code {rl}\n")
-        
+        request_json = requests_error_handler.handle_request_error(request_type="post", request_url=webhookurl, request_json=data, request_params={'wait': 'true'})
+        messageid = request_json["id"]
+
         if not exists("config/messages"):
             os.mkdir("config/messages")
         
@@ -819,16 +805,12 @@ def deletemessage(main_loop_counter: int):
             rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
             time.sleep(1)
 
-            if "204" in str(rl):
-                logging.debug(f"discord message {message_id} is unused and is now deleted")
-            
-            else:
-                logging.debug(f"discord message {message_id} could not be deleted with status code {rl}") 
+            request_url_combined = f"{webhookurl}/messages/{messageid}"
+            request_json = requests_error_handler.handle_request_error(request_type="delete", request_url=request_url_combined, request_params={'wait': 'true'}, status_type_ok=[204])
 
             os.remove(f"config/messages/{message}")
             
-            if verbose:
-                logging.debug(f"removing unused message file {message}")
+            logging.debug(f"removing unused message file {message}")
 
 def delete_html(server_folders: list):
     logging.debug(f"checking if html files need to be deleted if unused")
