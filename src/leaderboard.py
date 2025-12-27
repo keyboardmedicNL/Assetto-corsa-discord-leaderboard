@@ -22,6 +22,24 @@ import config_loader
 config = config_loader.load_config
 configp = configparser.ConfigParser(strict=False)
 
+color_list = [
+    0xA4C400,
+    0x60A917,
+    0x008A00,
+    0x00ABA9,
+    0x1BA1E2,
+    0x0050EF,
+    0x6A00FF,
+    0xAA00FF,
+    0xF472D0,
+    0xD80073,
+    0xA20025,
+    0xE51400,
+    0xFA6800,
+    0xF0A30A,
+    0xE3C800
+    ]
+
 def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
     logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
     
@@ -36,12 +54,12 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
             scripttype = str(configp['SCRIPT_...']['SCRIPT'])
             scripttype = scripttype.replace("'","")
 
-            if scripttype in overtakescript:
+            if scripttype in overtake_script:
                 shmoovin_type = "Shmoovin overtake leaderboard"
                 has_shmoovin = True
                 logging.debug(f"shmoovin was found with the type = overtake")
 
-            elif scripttype in driftscript:
+            elif scripttype in drift_script:
                 shmoovin_type = "Shmoovin drift leaderboard"
                 has_shmoovin = True
                 logging.debug(f"shmoovin was found with the type = drift")
@@ -469,8 +487,8 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
                 finallist.append(f"***{str(classlist[i])}***:\n")
                 finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classlist[i])}</h3>\n</div>\n")
         
-        if scorelength >= leaderboardlimit:
-            scorelength = leaderboardlimit
+        if scorelength >= leaderboard_limit:
+            scorelength = leaderboard_limit
         
         for classcore in scores[i]:
             scorecounter = scorecounter + 1
@@ -489,10 +507,10 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
                 
                 score_input = classcore[3].strip()
                 
-                if show_input_discord == "true" and not use_short_name and server_type != "acserver":
+                if show_input_discord and not use_short_name and server_type != "acserver":
                     finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
                 
-                elif show_input_discord == "true" and use_short_name and server_type != "acserver":
+                elif show_input_discord and use_short_name and server_type != "acserver":
                     short_name = str(classcore[1])[0:6]
                     finallist.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
                 
@@ -660,10 +678,10 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
         sector_times = "NA"
     
     # checks if full server status should be shown and formats data for it
-    if onlyleaderboards.lower() == "false":
+    if only_leaderboards:
         configp.read(server_cfg_file)
         httpport = str(configp['SERVER']['HTTP_PORT'])
-        serverhttp = f"{serveradress}:{httpport}"
+        serverhttp = f"{server_adress}:{httpport}"
         try:
             rl = requests.get(f"http://{serverhttp}/INFO")
             if verbose:
@@ -689,16 +707,17 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             logging.debug(f"an exception occured for server {combined_server_path_rel} {e}")
     
     # returns correct format based on selected parameters
-    if onlyleaderboards.lower() == "false":
+    if only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
                     "title": name,
                     "description":"",
+                    "color": color_list[main_loop_counter],
                     "fields": [
                         {
                             "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={server_adress_display}&httpPort={httpport})",
                         },
                         {
                             "name": "Status",
@@ -771,7 +790,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             logging.debug(f"messageid: {messageid} read from {main_loop_counter}.txt")
             logging.debug(f"json data being send to webhook is: \n{data}\n")
 
-        request_url_combined = f"{webhookurl}/messages/{messageid}"
+        request_url_combined = f"{web_hook_url}/messages/{messageid}"
         requests_error_handler.handle_request_error(request_type="patch", request_url=request_url_combined, request_json=data, request_params={'wait': 'true'})
 
     # creates leaderboard message if not allready created
@@ -779,7 +798,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     else:
         logging.debug(f"json data being send to webhook is: \n{data}\n")
 
-        request_json = requests_error_handler.handle_request_error(request_type="post", request_url=webhookurl, request_json=data, request_params={'wait': 'true'})
+        request_json = requests_error_handler.handle_request_error(request_type="post", request_url=web_hook_url, request_json=data, request_params={'wait': 'true'})
         jsonifyd_request = request_json.json()
         messageid = jsonifyd_request["id"]
 
@@ -802,10 +821,10 @@ def deletemessage(main_loop_counter: int):
             with open(f"config/messages/{message}") as File:
                 message_id = str(File.readline())
 
-            rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
+            rl = requests.delete(f"{web_hook_url}/messages/{message_id}",params={'wait': 'true'})
             time.sleep(1)
 
-            request_url_combined = f"{webhookurl}/messages/{messageid}"
+            request_url_combined = f"{web_hook_url}/messages/{messageid}"
             request_json = requests_error_handler.handle_request_error(request_type="delete", request_url=request_url_combined, request_params={'wait': 'true'}, status_type_ok=[204])
 
             os.remove(f"config/messages/{message}")
@@ -849,7 +868,6 @@ def main():
             for server_folder in folders_in_servers_path:
 
                 combined_server_path_rel = os.path.join(servers_path,server_folder)
-                leaderboardlimit = int(configJson["leaderboardlimit"])
                 
                 # checks if folder is actually a server folder
                 if folder_identifier in server_folder.lower() and os.path.isdir(combined_server_path_rel):
@@ -925,39 +943,42 @@ def main():
 
 if __name__ == "__main__":
 
-    # load config
+    # load legacy config
     with open("config/config.json") as config:
         configJson = json.load(config)
         interval = configJson["interval"]
         servers_pathlst = configJson["serverspath"]
-        webhookurl = configJson["webhookurl"]
+        web_hook_url = configJson["webhookurl"]
         folder_identifier = configJson["folderindentifier"]
-        leaderboardlimit = int(configJson["leaderboardlimit"])
-        driftscript = configJson["shmoovindrifturl"]
-        overtakescript = configJson["shmoovinovertakeurl"]
-        onlyleaderboards = configJson["onlyleaderboards"]
-        serveradress = configJson["serveradress"]
-        serveradressdisplay = configJson["serveradressdisplay"]
+        leaderboard_limit = int(configJson["leaderboardlimit"])
+        drift_script = configJson["shmoovindrifturl"]
+        overtake_script = configJson["shmoovinovertakeurl"]
+        banned_words = configJson["banned_words"]
+        log_lookback = int(configJson["log_lookback"])
+        server_adress = configJson["serveradress"]
+        server_adress_display = configJson["serveradressdisplay"]
+
+        only_leaderboards = configJson["onlyleaderboards"]
+        if only_leaderboards.lower() == "true":
+            only_leaderboards = True
+        
+        elif only_leaderboards.lower() == "false":
+            only_leaderboards = False
+
         show_input = configJson["show_input"]
-        verbose = configJson["verbose"]
-        log_to_file = configJson["log_to_file"]
-        use_short_name = configJson["log_to_file"]
+        if show_input.lower() == "true":
+            show_input = True
         
-        if verbose.lower() == "true":
-            verbose = True
-        
-        elif verbose.lower() == "false":
-            verbose = False
-        
+        elif show_input.lower() == "false":
+            show_input = False
+
+        use_short_name = configJson["use_short_name"]
         if use_short_name.lower() == "true":
             use_short_name = True
         
         elif use_short_name.lower() == "false":
             use_short_name = False
         
-        shmoovinurl = driftscript + overtakescript
-        banned_words = configJson["banned_words"]
-        log_lookback = int(configJson["log_lookback"])
         logging.debug("succesfully loaded config\n")
 
     main()
