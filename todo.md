@@ -1,5 +1,2 @@
 - change cfgs to yaml (with backwards compat support for json)
 - split html and webhook logic to seperate modules
-- only allow script to loop back all the way once on script start
-- add discordbotcfg entries to sendtowebhook
-- move discordbotcfg to main

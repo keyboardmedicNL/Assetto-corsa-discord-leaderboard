@@ -19,7 +19,6 @@ import color_picker
 import requests_error_handler
 import config_loader
 
-config = config_loader.load_config
 configp = configparser.ConfigParser(strict=False)
 
 color_list = [
@@ -54,12 +53,12 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
             scripttype = str(configp['SCRIPT_...']['SCRIPT'])
             scripttype = scripttype.replace("'","")
 
-            if scripttype in overtake_script:
+            if scripttype in config.overtake_script:
                 shmoovin_type = "Shmoovin overtake leaderboard"
                 has_shmoovin = True
                 logging.debug(f"shmoovin was found with the type = overtake")
 
-            elif scripttype in drift_script:
+            elif scripttype in config.drift_script:
                 shmoovin_type = "Shmoovin drift leaderboard"
                 has_shmoovin = True
                 logging.debug(f"shmoovin was found with the type = drift")
@@ -370,9 +369,9 @@ def findtimevanilla(combined_server_path_rel):
 # checks if name is on banned names list
 def check_name(name_to_check: str) -> bool:
     logging.debug(f"checking {name_to_check} to see if it matches any banned words")
-    logging.debug(f"list of banned words to check against:\n{banned_words}")
+    logging.debug(f"list of banned words to check against:\n{config.banned_words}")
     allowed = True
-    for banned_word in banned_words:
+    for banned_word in config.banned_words:
         if banned_word.lower() in name_to_check.lower():
             allowed = False
             logging.debug(f"Found banned word: {banned_word} in the name: {name_to_check}\n")
@@ -466,7 +465,7 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
     logging.debug(f"filtered times = \n{filtered_times}")
     return(filtered_times)
 
-def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, use_short_name: bool) -> tuple[str, str]:
+def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, use_short_name: bool, server_type: str = "assettoserver") -> tuple[str, str]:
 
     logging.debug(f"attempting to format scores with type {score_type} with classcfg {classcfg}") 
     
@@ -487,8 +486,8 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
                 finallist.append(f"***{str(classlist[i])}***:\n")
                 finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classlist[i])}</h3>\n</div>\n")
         
-        if scorelength >= leaderboard_limit:
-            scorelength = leaderboard_limit
+        if scorelength >= config.leaderboard_limit:
+            scorelength = config.leaderboard_limit
         
         for classcore in scores[i]:
             scorecounter = scorecounter + 1
@@ -678,10 +677,10 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
         sector_times = "NA"
     
     # checks if full server status should be shown and formats data for it
-    if not only_leaderboards:
+    if not config.only_leaderboards:
         configp.read(server_cfg_file)
         http_port = str(configp['SERVER']['HTTP_PORT'])
-        serverhttp = f"{server_adress}:{http_port}"
+        serverhttp = f"{config.server_adress}:{http_port}"
         try:
             rl = requests.get(f"http://{serverhttp}/INFO")
             logging.debug(f"server info response is: {rl} for server {combined_server_path_rel}")
@@ -699,7 +698,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                 maxplayers = "NA"
                 clients = "NA"
                 track = "NA"
-                
+
         except Exception as e:
             status = ":red_circle: Offline"
             maxplayers = "NA"
@@ -708,7 +707,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             logging.debug(f"an exception occured for server {combined_server_path_rel} {e}")
     
     # returns correct format based on selected parameters
-    if not only_leaderboards:
+    if not config.only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
@@ -718,7 +717,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                     "fields": [
                         {
                             "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={server_adress_display}&httpport={http_port})",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={config.server_adress_display}&httpport={http_port})",
                         },
                         {
                             "name": "Status",
@@ -791,7 +790,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             logging.debug(f"messageid: {messageid} read from {main_loop_counter}.txt")
             logging.debug(f"json data being send to webhook is: \n{data}\n")
 
-        request_url_combined = f"{web_hook_url}/messages/{messageid}"
+        request_url_combined = f"{config.web_hook_url}/messages/{messageid}"
         requests_error_handler.handle_request_error(request_type="patch", request_url=request_url_combined, request_json=data, request_params={'wait': 'true'})
 
     # creates leaderboard message if not allready created
@@ -799,7 +798,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     else:
         logging.debug(f"json data being send to webhook is: \n{data}\n")
 
-        request_json = requests_error_handler.handle_request_error(request_type="post", request_url=web_hook_url, request_json=data, request_params={'wait': 'true'})
+        request_json = requests_error_handler.handle_request_error(request_type="post", request_url=config.web_hook_url, request_json=data, request_params={'wait': 'true'})
         jsonifyd_request = request_json.json()
         messageid = jsonifyd_request["id"]
 
@@ -822,10 +821,10 @@ def deletemessage(main_loop_counter: int):
             with open(f"config/messages/{message}") as File:
                 message_id = str(File.readline())
 
-            rl = requests.delete(f"{web_hook_url}/messages/{message_id}",params={'wait': 'true'})
+            rl = requests.delete(f"{config.web_hook_url}/messages/{message_id}",params={'wait': 'true'})
             time.sleep(1)
 
-            request_url_combined = f"{web_hook_url}/messages/{messageid}"
+            request_url_combined = f"{config.web_hook_url}/messages/{messageid}"
             request_json = requests_error_handler.handle_request_error(request_type="delete", request_url=request_url_combined, request_params={'wait': 'true'}, status_type_ok=[204])
 
             os.remove(f"config/messages/{message}")
@@ -856,7 +855,7 @@ def main():
         # loop trough folders in server folder
         main_loop_counter = -1
     
-        for servers_path in servers_pathlst:
+        for servers_path in config.servers_pathlst:
             #set default vars for use in instance of loop // replace with defaults in functions later
             has_shmoovin = False
             shmoovin_type = ""
@@ -864,14 +863,14 @@ def main():
             folders_in_servers_path= os.listdir(str(servers_path))
 
             logging.debug(f"list of folders to check:{folders_in_servers_path}")
-            logging.debug(f"checking {log_lookback} logs back for entries")
+            logging.debug(f"checking {config.log_lookback} logs back for entries")
 
             for server_folder in folders_in_servers_path:
 
                 combined_server_path_rel = os.path.join(servers_path,server_folder)
                 
                 # checks if folder is actually a server folder
-                if folder_identifier in server_folder.lower() and os.path.isdir(combined_server_path_rel):
+                if config.folder_identifier in server_folder.lower() and os.path.isdir(combined_server_path_rel):
                     logging.debug(f"checking server {combined_server_path_rel}")
 
                     has_score_file_check("leaderboard.txt",combined_server_path_rel)
@@ -896,7 +895,7 @@ def main():
                         
                         for log_index, selected_log in enumerate(sorted_log_files):
 
-                            if (log_index < log_lookback and log_index != (len(sorted_log_files)-1)) and not initial_loop_finished : # checks if current logs are within the set amount of logs to look back at
+                            if (log_index < config.log_lookback and log_index != (len(sorted_log_files)-1)) and not initial_loop_finished : # checks if current logs are within the set amount of logs to look back at
                                 
                                 if log_index != (len(sorted_log_files)-1):
                                     previous_log = sorted_log_files[int(log_index + 1)]
@@ -922,14 +921,14 @@ def main():
                         
                         if has_shmoovin:
                             sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                            shmoovin_score_discord, shmoovin_score_html = format_scores(sorted_scores, class_cfg, "leaderboard", show_input,use_short_name)
-                        sector_times_discord, sector_times_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
+                            shmoovin_score_discord, shmoovin_score_html = format_scores(sorted_scores, class_cfg, "leaderboard", config.show_input, config.use_short_name)
+                        sector_times_discord, sector_times_html = format_sector(config.show_input, config.use_short_name, combined_server_path_rel, class_cfg)
                     
                     elif server_type == "acServer":
                         findtimevanilla(combined_server_path_rel)
                     
                     laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
-                    laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", show_input, use_short_name)
+                    laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", config.show_input, config.use_short_name, server_type)
                     
                     send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors)
                     #sendtohtml(shmoovin_score_discord,finaltimes_html,has_shmoovin,shmoovin_type, combined_server_path_rel, server_folder)
@@ -939,47 +938,53 @@ def main():
             delete_html(folders_in_servers_path)
 
         initial_loop_finished = True
-        logging.debug(f"waiting for {interval} minutes")
-        time.sleep(interval*60)
+        logging.debug(f"waiting for {config.interval} minutes")
+        time.sleep(config.interval*60)
 
 if __name__ == "__main__":
 
-    # load legacy config
-    with open("config/config.json") as config:
-        configJson = json.load(config)
-        interval = configJson["interval"]
-        servers_pathlst = configJson["serverspath"]
-        web_hook_url = configJson["webhookurl"]
-        folder_identifier = configJson["folderindentifier"]
-        leaderboard_limit = int(configJson["leaderboardlimit"])
-        drift_script = configJson["shmoovindrifturl"]
-        overtake_script = configJson["shmoovinovertakeurl"]
-        banned_words = configJson["banned_words"]
-        log_lookback = int(configJson["log_lookback"])
-        server_adress = configJson["serveradress"]
-        server_adress_display = configJson["serveradressdisplay"]
+    # loads config
+    if exists(os.path.join("config","config.yaml")):
+        config = config_loader.load_config()
+        logging.debug("succesfully loaded yaml config")
+    else:
+        # load legacy config
+        with open("config/config.json") as config:
+            configJson = json.load(config)
+            class config:
+                interval = configJson["interval"]
+                servers_pathlst = configJson["serverspath"]
+                web_hook_url = configJson["webhookurl"]
+                folder_identifier = configJson["folderindentifier"]
+                leaderboard_limit = int(configJson["leaderboardlimit"])
+                drift_script = configJson["shmoovindrifturl"]
+                overtake_script = configJson["shmoovinovertakeurl"]
+                banned_words = configJson["banned_words"]
+                log_lookback = int(configJson["log_lookback"])
+                server_adress = configJson["serveradress"]
+                server_adress_display = configJson["serveradressdisplay"]
 
-        only_leaderboards = configJson["onlyleaderboards"]
-        if only_leaderboards.lower() == "true":
-            only_leaderboards = True
-        
-        elif only_leaderboards.lower() == "false":
-            only_leaderboards = False
+                only_leaderboards = configJson["onlyleaderboards"]
+                if only_leaderboards.lower() == "true":
+                    only_leaderboards = True
+                
+                elif only_leaderboards.lower() == "false":
+                    only_leaderboards = False
 
-        show_input = configJson["show_input"]
-        if show_input.lower() == "true":
-            show_input = True
-        
-        elif show_input.lower() == "false":
-            show_input = False
+                show_input = configJson["show_input"]
+                if show_input.lower() == "true":
+                    show_input = True
+                
+                elif show_input.lower() == "false":
+                    show_input = False
 
-        use_short_name = configJson["use_short_name"]
-        if use_short_name.lower() == "true":
-            use_short_name = True
-        
-        elif use_short_name.lower() == "false":
-            use_short_name = False
-        
-        logging.debug("succesfully loaded config\n")
+                use_short_name = configJson["use_short_name"]
+                if use_short_name.lower() == "true":
+                    use_short_name = True
+                
+                elif use_short_name.lower() == "false":
+                    use_short_name = False
+            
+            logging.debug("succesfully loaded legacy config")
 
     main()
