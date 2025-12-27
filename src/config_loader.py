@@ -16,7 +16,9 @@ default_config = {
     "log_to_file": "false",
     "use_short_name": "false",
     "banned_words":["penis","vagina","nigger"],
-    "log_lookback": "3"
+    "log_lookback": "3",
+    "time_before_retry": 60,
+    "max_errors_allowed": 3
 }
 
 default_server_config = {
