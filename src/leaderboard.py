@@ -678,14 +678,14 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
         sector_times = "NA"
     
     # checks if full server status should be shown and formats data for it
-    if only_leaderboards:
+    if not only_leaderboards:
         configp.read(server_cfg_file)
-        httpport = str(configp['SERVER']['HTTP_PORT'])
-        serverhttp = f"{server_adress}:{httpport}"
+        http_port = str(configp['SERVER']['HTTP_PORT'])
+        serverhttp = f"{server_adress}:{http_port}"
         try:
             rl = requests.get(f"http://{serverhttp}/INFO")
-            if verbose:
-                logging.debug(f"server info response is: {rl} for server {combined_server_path_rel}")
+            logging.debug(f"server info response is: {rl} for server {combined_server_path_rel}")
+
             if "200" in str(rl):
                 rljson = rl.json()
                 clients = rljson["clients"]
@@ -699,6 +699,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                 maxplayers = "NA"
                 clients = "NA"
                 track = "NA"
+                
         except Exception as e:
             status = ":red_circle: Offline"
             maxplayers = "NA"
@@ -707,7 +708,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             logging.debug(f"an exception occured for server {combined_server_path_rel} {e}")
     
     # returns correct format based on selected parameters
-    if only_leaderboards:
+    if not only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
@@ -717,7 +718,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                     "fields": [
                         {
                             "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={server_adress_display}&httpPort={httpport})",
+                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={server_adress_display}&httpport={http_port})",
                         },
                         {
                             "name": "Status",
