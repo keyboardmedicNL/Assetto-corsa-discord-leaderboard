@@ -50,7 +50,7 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
 
     return(has_shmoovin,shmoovin_type)
 
-def get_server_cfg(combined_server_path_rel: str) -> tuple(dict, bool, bool, bool):
+def get_server_cfg(combined_server_path_rel: str) -> tuple[dict, bool, bool, bool]:
     logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {combined_server_path_rel}")
 
     class_cfg = {"none": ["none"]}
@@ -623,17 +623,13 @@ def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type:
 
     refresh_script = "<script>setTimeout(function(){location.reload()},10000);</script>"
     
-    if showtimes:
-        times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
-        
-        times_html_file = os.path.join("html",f"{server_folder}-times.html")
-        edit_html(times_html_file, times_html)
-    
-    if hasshmoovin:
-        shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
-        
-        shmoovin_html_file = os.path.join("html",f"{server_folder}-shmoovin.html")
-        edit_html(shmoovin_html_file, shmoovin_html)
+    times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
+    times_html_file = os.path.join("html",f"{server_folder}-times.html")
+    edit_html(times_html_file, times_html)
+
+    shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
+    shmoovin_html_file = os.path.join("html",f"{server_folder}-shmoovin.html")
+    edit_html(shmoovin_html_file, shmoovin_html)
 
 def edit_html(file: str, html: str):
     if exists (file):
@@ -830,19 +826,6 @@ def delete_html(server_folders: list):
         if not html_matches_servername:
             os.remove(os.path.join("html",html_file))
             logging.debug(f"remove {html_file} because it is no longer used")
-
-def read_server_config(combined_server_path_rel: str):
-    discordbotcfg_file = os.path.join(combined_server_path_rel,"discordbotcfg.json")
-
-    if exists(discordbotcfg_file):
-        with open(discordbotcfg_file) as config:
-            configJson = json.load(config)
-        try:
-            showtimes = configJson["showlaptimes"]
-            if showtimes.lower() == "false":
-                showtimes = False
-        except:
-            pass
 
 def main():
     logging.info("Starting assetto discord leaderboards...")
