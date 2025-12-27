@@ -14,7 +14,7 @@ handlers:
 
   file:
     class: logging.FileHandler
-    level: INFO
+    level: DEBUG
     formatter: standard
     filename: ./config/going_live.log
     encoding: utf-8

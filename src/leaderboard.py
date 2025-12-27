@@ -484,8 +484,8 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
     finalstr_html = "".join(finallist_html)
     
     if finalstr == "":
-        finalstr = "currently empty"
-        finalstr_html = "<div class=\"namebox\">\n<p>currently empty</p>\n</div>\n"
+        finalstr = "NA"
+        finalstr_html = "<div class=\"namebox\">\n<p>NA</p>\n</div>\n"
     
     logging.debug(f"formatted scores for discord = \n{finalstr}")
     logging.debug(f"formatted scores for html = \n{finalstr_html}")
@@ -632,7 +632,7 @@ def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type:
                 logging.debug(f"{server_folder}-shmoovin.html was created with shmoovin scores")
                 logging.debug(f"html content:\n{shmoovin_html}\n")
 
-def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type: str, combined_server_path_rel: str, main_loop_counter: int):
+def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str = "N/A", lap_times: str = "N/A", sector_times: str = "N/A"):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -690,7 +690,7 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
             logging.debug(f"an exception occured for server {combined_server_path_rel} {e}")
     
     # returns correct format based on selected parameters
-    if onlyleaderboards.lower() == "false" and hasshmoovin and showtimes :
+    if onlyleaderboards.lower() == "false":
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
@@ -718,50 +718,15 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
                         },
                         {
                             "name": "Laptimes",
-                            "value": finaltimes
+                            "value": lap_times,
                         },
                         {
-                            "name": shmoovin_type,
-                            "value": finalstr
+                            "name": "sector times",
+                            "value": sector_times,
                         },
                         {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
-
-    elif onlyleaderboards.lower() == "false" and not hasshmoovin and showtimes:
-        logging.debug(f"posting/updating message with full server info and laptimes for server {combined_server_path_rel}")
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "fields": [
-                        {
-                            "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
-                        },
-                        {
-                            "name": "Status",
-                            "value": status,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Players",
-                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Track",
-                            "value": track,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Laptimes",
-                            "value": finaltimes
+                            "name": f"Shmoovin score",
+                            "value": shmoovin_score,
                         },
                         {
                             "name": "",
@@ -771,82 +736,7 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
                         "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
-    
-    elif onlyleaderboards.lower() == "false" and not hasshmoovin and not showtimes:
-        logging.debug(f"posting/updating message with full server info for server {combined_server_path_rel}")
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "fields": [
-                        {
-                            "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
-                        },
-                        {
-                            "name": "Status",
-                            "value": status,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Players",
-                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Track",
-                            "value": track,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
-    
-    elif onlyleaderboards.lower() == "false" and hasshmoovin  and not showtimes:
-        logging.debug(f"posting/updating message with full server info and shmoovin for server {combined_server_path_rel}")
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "fields": [
-                        {
-                            "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={serveradressdisplay}&httpPort={httpport})",
-                        },
-                        {
-                            "name": "Status",
-                            "value": status,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Players",
-                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Track",
-                            "value": track,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": shmoovin_type,
-                            "value": finalstr
-                        },
-                        {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
-    
-    elif onlyleaderboards.lower() == "true" and hasshmoovin  and showtimes:
+    else:
         logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
         data = {"embeds": [
                 {
@@ -855,51 +745,15 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
                     "fields": [
                         {
                             "name": "Laptimes",
-                            "value": finaltimes
+                            "value": lap_times,
                         },
                         {
-                            "name": shmoovin_type,
-                            "value": finalstr
+                            "name": "sector times",
+                            "value": sector_times,
                         },
                         {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
-    
-    elif onlyleaderboards.lower() == "true" and not hasshmoovin and showtimes:
-        logging.debug(f"posting/updating message with laptimes for server {combined_server_path_rel}")
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "fields": [
-                        {
-                            "name": "Laptimes",
-                            "value": finaltimes
-                        },
-                        {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
-    
-    elif onlyleaderboards.lower() == "true" and hasshmoovin  and not showtimes:
-        logging.debug(f"posting/updating message with shmoovin for server {combined_server_path_rel}")
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "fields": [
-                        {
-                            "name": shmoovin_type,
-                            "value": finalstr
+                            "name": f"Shmoovin score",
+                            "value": shmoovin_score,
                         },
                         {
                             "name": "",
@@ -919,20 +773,10 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
             logging.debug(f"json data being send to webhook is: \n{data}\n")
         
         rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
+        time.sleep(1)
+
         if "200" in str(rl):
             logging.debug(f"discord message {messageid} updated\n")
-        
-        elif "429" in str(rl):
-            for i in range(1,60):
-                logging.debug(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
-                time.sleep(i)
-                rl = requests.patch(f"{webhookurl}/messages/{messageid}", json=data, params={'wait': 'true'})
-                
-                if "200" in str(rl):
-                    break
-                
-                if i == 60 and not "200" in str(rl):
-                   logging.debug(f"discord message {messageid} could not be updated with status code {rl}\n") 
         
         else:
             logging.debug(f"discord message {messageid} could not be updated with status code {rl}\n") 
@@ -940,24 +784,15 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
     
     else:
         logging.debug(f"json data being send to webhook is: \n{data}\n")
+
         rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
+        time.sleep(1)
+        
         rljson = rl.json()
         messageid = rljson["id"]
         
         if "200" in str(rl):
             logging.debug(f"discord message {messageid} posted\n")
-        
-        elif "429" in str(rl):
-            for i in range(1,60):
-                logging.debug(f"we are being rate limited, waiting for {i} seconds to update discord message with id {messageid}")
-                time.sleep(i)
-                rl = requests.post(webhookurl, json=data, params={'wait': 'true'})
-                
-                if "200" in str(rl):
-                    break
-                
-                if i == 60 and not "200" in str(rl):
-                   logging.debug(f"discord message {messageid} could not be posted with status code {rl}\n") 
         
         else:
             logging.debug(f"discord message {messageid} could not be posted with status code {rl}\n")
@@ -968,8 +803,7 @@ def sendtowebhook(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_ty
         with open(f"config/messages/{main_loop_counter}.txt", 'w') as File:
             File.write(f"{messageid}")
             
-            if verbose:
-                logging.debug(f"{messageid} saved in file {main_loop_counter}.txt")
+        logging.debug(f"{messageid} saved in file {main_loop_counter}.txt")
 
 def deletemessage(main_loop_counter: int):
     logging.debug(f"checking if messages need to be deleted if unused") 
@@ -981,26 +815,16 @@ def deletemessage(main_loop_counter: int):
             
             with open(f"config/messages/{message}") as File:
                 message_id = str(File.readline())
+
             rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
-            
+            time.sleep(1)
+
             if "204" in str(rl):
                 logging.debug(f"discord message {message_id} is unused and is now deleted")
             
-            elif "429" in str(rl):
-                
-                for i in range(1,60):
-                    logging.debug(f"we are being rate limited, waiting for {i} seconds to update discord message with id {message_id}")
-                    time.sleep(i)
-                    rl = requests.delete(f"{webhookurl}/messages/{message_id}",params={'wait': 'true'})
-                    
-                    if "204" in str(rl):
-                        break
-                    
-                    if i == 60 and not "204" in str(rl):
-                        logging.debug(f"discord message {message_id} could not be deleted with status code {rl}") 
-            
             else:
                 logging.debug(f"discord message {message_id} could not be deleted with status code {rl}") 
+
             os.remove(f"config/messages/{message}")
             
             if verbose:
@@ -1053,12 +877,15 @@ def main():
                     server_type = server_type_check(combined_server_path_rel)
                     class_cfg = get_class_cfg(combined_server_path_rel)
 
-                    finalstr = "NA"
-                    finalstr_html = "NA"
+                    laptimes_discord = "NA"
+                    laptimes_html = "NA"
                     main_loop_counter = main_loop_counter+1
                     
-                    final_sector_str = ""
-                    final_sector_str_html = ""
+                    sector_times_discord = "NA"
+                    sector_times_html = "NA"
+
+                    shmoovin_score_discord = "NA"
+                    shmoovin_score_html = "NA"
                     
                     if server_type == "AssettoServer":
 
@@ -1085,40 +912,17 @@ def main():
                         
                         if has_shmoovin:
                             sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                            finalstr, finalstr_html = format_scores(sorted_scores, class_cfg, "leaderboard", show_input,use_short_name)
-                        final_sector_str,final_sector_str_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
+                            shmoovin_score_discord, shmoovin_score_html = format_scores(sorted_scores, class_cfg, "leaderboard", show_input,use_short_name)
+                        sector_times_discord, sector_times_html = format_sector(show_input, use_short_name, combined_server_path_rel, class_cfg)
                     
                     elif server_type == "acServer":
                         findtimevanilla(combined_server_path_rel)
                     
-                    times = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
-                    finaltimes, finaltimes_html = format_scores(times, class_cfg, "laptimes", show_input, use_short_name)
+                    laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
+                    laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", show_input, use_short_name)
                     
-                    if final_sector_str != "" and "currently empty" in finaltimes.lower():
-                        finaltimes = ""
-                    
-                    if final_sector_str_html != "" and "currently empty" in finaltimes_html.lower():
-                        finaltimes_html = ""
-                    finaltimes_combined = finaltimes + "\n" + final_sector_str
-                    
-                    while len(finaltimes_combined) >= 1024 or len(finalstr) >= 1024:                       
-                        print(f"\ndata to send to discord is too big, limiting number of entries to {leaderboardlimit} and turning off input recording\n")
-                        finaltimes,_ = format_scores(times, class_cfg, "laptimes", False, True)
-                        final_sector_str,final_sector_str_html = format_sector(False, True, combined_server_path_rel, class_cfg)
-                        finaltimes_combined = finaltimes + "\n" + final_sector_str
-                        
-                        if has_shmoovin == True:
-                            finalstr,_ = format_scores(scores, class_cfg, "leaderboard", False, True)
-                        
-                        if leaderboardlimit < 3:
-                            finaltimes_combined = "you have too much text to fit atleast 3 scores in this embed, consider not using classes or limiting the amount of loop timings on the track."
-                            finalstr = ""
-                        
-                        leaderboardlimit = leaderboardlimit - 1
-                    
-                    finaltimes_html = finaltimes_html + "\n" + final_sector_str_html 
-                    sendtowebhook(finalstr, finaltimes_combined, has_shmoovin,shmoovin_type, combined_server_path_rel, main_loop_counter)
-                    sendtohtml(finalstr_html,finaltimes_html,has_shmoovin,shmoovin_type, combined_server_path_rel, server_folder)
+                    send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord)
+                    #sendtohtml(shmoovin_score_discord,finaltimes_html,has_shmoovin,shmoovin_type, combined_server_path_rel, server_folder)
                 
             
             deletemessage(main_loop_counter)

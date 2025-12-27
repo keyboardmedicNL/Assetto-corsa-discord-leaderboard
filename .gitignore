@@ -9,3 +9,5 @@ log.txt
 *.log
 __pycache__
 /NewAceservers
+/test
+/test/*
