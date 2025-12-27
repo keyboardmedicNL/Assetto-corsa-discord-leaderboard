@@ -2,10 +2,16 @@ import logging
 import requests
 import time
 import config_loader
+import os
 
-loaded_config = config_loader.load_config()
-time_before_retry = loaded_config.time_before_retry
-max_errors_allowed = loaded_config.max_errors_allowed
+if os.path.exists(os.path.join("config","config.yaml")):
+    loaded_config = config_loader.load_config()
+    time_before_retry = loaded_config.time_before_retry
+    max_errors_allowed = loaded_config.max_errors_allowed
+else:
+    time_before_retry = 3
+    max_errors_allowed = 60
+
 
 error_count = 0
 

@@ -70,44 +70,59 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
 def get_server_cfg(combined_server_path_rel: str) -> tuple[dict, bool, bool, bool]:
     logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {combined_server_path_rel}")
 
-    class_cfg = {"none": ["none"]}
-    show_times = True
-    show_shmoovin = True
-    show_sectors = True
-    config_file_path = os.path.join(combined_server_path_rel,"discordbotcfg.json")
+    if exists(os.path.join(combined_server_path_rel,"discordbotcfg.yaml")):
+        server_config = config_loader.load_server_config(combined_server_path_rel)
 
-    if exists(config_file_path):
-        with open(config_file_path) as config:
-            configJson = json.load(config)
-        
-        try:
-            class_cfg = configJson["classes"]
-        except:
-            pass
+        logging.debug(f"class_cfg = {server_config.class_cfg}, show_times = {str(server_config.show_times)}, show_shmoovin = {str(server_config.show_shmoovin)}, show_sectors = {str(server_config.show_sectors)}")
+        return(server_config.class_cfg, server_config.show_times, server_config.show_shmoovin, server_config.show_sectors)
 
-        try:
-            show_times = configJson["showlaptimes"]
-            if show_times.lower() == "false":
-                show_times = False
-        except:
-            pass
+    else:
+        class_cfg = {"none": ["none"]}
+        show_times = True
+        show_shmoovin = True
+        show_sectors = True
+        config_file_path = os.path.join(combined_server_path_rel,"discordbotcfg.json")
 
-        try:
-            show_shmoovin = configJson["showshmoovin"]
-            if show_shmoovin.lower() == "false":
-                show_shmoovin = False
-        except:
-            pass
+        if exists(config_file_path):
+            with open(config_file_path) as config:
+                configJson = json.load(config)
+            
+            try:
+                class_cfg = configJson["classes"]
+            except:
+                pass
 
-        try:
-            show_sectors = configJson["showsectors"]
-            if show_sectors.lower() == "false":
-                show_sectors = False
-        except:
-            pass
+            try:
+                show_times = configJson["showlaptimes"]
+                if show_times.lower() == "false":
+                    show_times = False
+                else:
+                    show_times = True
+            except:
+                pass
 
-    logging.debug(f"class_cfg = {class_cfg}, showtimes = {str(show_times)}, showshmoovin = {str(show_shmoovin)}")
+            try:
+                show_shmoovin = configJson["showshmoovin"]
+                if show_shmoovin.lower() == "false":
+                    show_shmoovin = False
+                else:
+                    show_shmoovin = True
+            except:
+                pass
 
+            try:
+                show_sectors = configJson["showsectors"]
+                if show_sectors.lower() == "false":
+                    show_sectors = False
+                else:
+                    show_sectors = True
+            except:
+                pass
+
+            data_for_yaml = {"class_cfg":class_cfg,"show_times":show_times,"show_shmoovin":show_shmoovin,"show_sectors":show_sectors}
+            create_yaml(data_for_yaml,os.path.join(combined_server_path_rel,"discordbotcfg.yaml"))
+
+            logging.debug(f"class_cfg = {class_cfg}, show_times = {str(show_times)}, show_shmoovin = {str(show_shmoovin)}, show_sectors = {str(show_sectors)}")    
     return(class_cfg, show_times, show_shmoovin, show_sectors)
 
 # checks if server folder contains assettoserver.exe or acserver.exe used to filter results
@@ -305,7 +320,7 @@ def write_score(name, score, car, input_method, leaderboard_file_name, combined_
         #logging.debug(f"content that was written to {leaderboard_file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
         
 # find laptimes for acServer sessions
-def findtimevanilla(combined_server_path_rel):
+def find_time_vanilla(combined_server_path_rel):
     logging.debug(f"Checking for acServer.exe score entries for server{combined_server_path_rel}") 
     try:
         latest_file = max(glob.glob(os.path.join(combined_server_path_rel,"results"),"*"), key=os.path.getctime)
@@ -550,29 +565,21 @@ def format_sector(show_input_sector: bool, use_short_name: bool, combined_server
             combined_sectors.append(times)
             combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
             combined_sectors_html.append(times_html)
-    
-    final_sector_str = "".join(combined_sectors)
-    final_sector_str_html = "".join(combined_sectors_html)
-    
+
+    if combined_sectors:
+        final_sector_str = "".join(combined_sectors)
+        final_sector_str_html = "".join(combined_sectors_html)
+    else:
+        final_sector_str = "NA"
+        final_sector_str_html = "NA"
+
     return(final_sector_str,final_sector_str_html)
 
-def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type: str, combined_server_path_rel: str, server_folder: str):
+def send_to_html(shmoovin_score: str, lap_times: str, sector_times: str, shmoovin_type: str, combined_server_path_rel: str, server_folder: str):
     logging.debug(f"attempting to send formatted scores to html for server {combined_server_path_rel}") 
     configp.read(os.path.join(combined_server_path_rel,"server_cfg.ini"))
     name = str(configp['SERVER']['NAME'])
-    showtimes = True
-    discordbotcfg_file = os.path.join(combined_server_path_rel,"discordbotcfg.json")
 
-    if exists(discordbotcfg_file):
-        with open(discordbotcfg_file) as config:
-            configJson = json.load(config)
-        try:
-            showtimes = configJson["showlaptimes"]
-            if showtimes.lower() == "false":
-                showtimes = False
-        except:
-            pass
-    
     if not exists("html"):
         os.mkdir("html")
     
@@ -640,13 +647,17 @@ def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type:
 
     refresh_script = "<script>setTimeout(function(){location.reload()},10000);</script>"
     
-    times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
+    times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{lap_times}\n{refresh_script}"
     times_html_file = os.path.join("html",f"{server_folder}-times.html")
     edit_html(times_html_file, times_html)
 
-    shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
+    shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{shmoovin_score}\n{refresh_script}"
     shmoovin_html_file = os.path.join("html",f"{server_folder}-shmoovin.html")
     edit_html(shmoovin_html_file, shmoovin_html)
+
+    sector_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{sector_times}\n{refresh_script}"
+    sector_html_file = os.path.join("html",f"{server_folder}-sectors.html")
+    edit_html(sector_html_file, sector_html)
 
 def edit_html(file: str, html: str):
     if exists (file):
@@ -657,7 +668,7 @@ def edit_html(file: str, html: str):
             logging.debug(f"wrote html to {file} with content\n{html}")
     else:
         with open(file, encoding='utf-8', errors='ignore', mode="w") as html_file:
-            html_file.write(shmoovin_html)
+            html_file.write(html)
             logging.debug(f"created html in {file}, with content\n{html}")
 
 def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: str, show_times: bool, show_shmoovin: bool, show_sectors: bool):
@@ -706,6 +717,11 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             track = "NA"
             logging.debug(f"an exception occured for server {combined_server_path_rel} {e}")
     
+    if main_loop_counter >= len(color_list):
+        color = color_list[main_loop_counter-len(color_list)]
+    else:
+        color = color_list[main_loop_counter]
+
     # returns correct format based on selected parameters
     if not config.only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
@@ -713,7 +729,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                 {
                     "title": name,
                     "description":"",
-                    "color": color_list[main_loop_counter],
+                    "color": color,
                     "fields": [
                         {
                             "name": f":race_car:",
@@ -760,6 +776,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                 {
                     "title": name,
                     "description":"",
+                    "color": color,
                     "fields": [
                         {
                             "name": "Laptimes",
@@ -810,7 +827,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             
         logging.debug(f"{messageid} saved in file {main_loop_counter}.txt")
 
-def deletemessage(main_loop_counter: int):
+def delete_message(main_loop_counter: int):
     logging.debug(f"checking if messages need to be deleted if unused") 
     message_lst= os.listdir("config/messages")
     
@@ -845,6 +862,14 @@ def delete_html(server_folders: list):
         if not html_matches_servername:
             os.remove(os.path.join("html",html_file))
             logging.debug(f"remove {html_file} because it is no longer used")
+
+def create_yaml(data_for_yaml: str, path_to_file: str):
+    yaml_string = yaml.dump(data_for_yaml)
+
+    with open(path_to_file,"x") as yaml_file:
+        yaml_file.write(yaml_string)
+
+    logging.debug(f"converted old config to yaml with data =\n{str(data_for_yaml)}")
 
 def main():
     logging.info("Starting assetto discord leaderboards...")
@@ -925,16 +950,16 @@ def main():
                         sector_times_discord, sector_times_html = format_sector(config.show_input, config.use_short_name, combined_server_path_rel, class_cfg)
                     
                     elif server_type == "acServer":
-                        findtimevanilla(combined_server_path_rel)
+                        find_time_vanilla(combined_server_path_rel)
                     
                     laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
                     laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", config.show_input, config.use_short_name, server_type)
                     
                     send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors)
-                    #sendtohtml(shmoovin_score_discord,finaltimes_html,has_shmoovin,shmoovin_type, combined_server_path_rel, server_folder)
+                    send_to_html(shmoovin_score_html, laptimes_html, sector_times_html, shmoovin_type, combined_server_path_rel, server_folder)
                 
             
-            deletemessage(main_loop_counter)
+            delete_message(main_loop_counter)
             delete_html(folders_in_servers_path)
 
         initial_loop_finished = True
@@ -947,6 +972,7 @@ if __name__ == "__main__":
     if exists(os.path.join("config","config.yaml")):
         config = config_loader.load_config()
         logging.debug("succesfully loaded yaml config")
+        
     else:
         # load legacy config
         with open("config/config.json") as config:
@@ -984,7 +1010,29 @@ if __name__ == "__main__":
                 
                 elif use_short_name.lower() == "false":
                     use_short_name = False
+
+        # builds dict to export to yaml
+        config_for_yaml = {
+            "interval":config.interval,
+            "servers_pathlst":config.servers_pathlst,
+            "web_hook_url":config.web_hook_url,
+            "folder_identifier":config.folder_identifier,
+            "leaderboard_limit":config.leaderboard_limit,
+            "drift_script":config.drift_script,
+            "overtake_script":config.overtake_script,
+            "banned_words":config.banned_words,
+            "log_lookback":config.log_lookback,
+            "server_adress":config.server_adress,
+            "server_adress_display":config.server_adress_display,
+            "only_leaderboards":config.only_leaderboards,
+            "show_input":config.show_input,
+            "use_short_name":config.use_short_name,
+            "time_before_retry":60,
+            "max_errors_allowed":3
+            }
             
-            logging.debug("succesfully loaded legacy config")
+        create_yaml(config_for_yaml,"config/config.yaml")   
+        
+        logging.debug("succesfully loaded legacy config")
 
     main()

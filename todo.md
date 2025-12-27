@@ -1,2 +1,0 @@
-- change cfgs to yaml (with backwards compat support for json)
-- split html and webhook logic to seperate modules
