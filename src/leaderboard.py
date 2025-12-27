@@ -53,9 +53,10 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
 def get_server_cfg(combined_server_path_rel: str) -> tuple(dict, bool, bool, bool):
     logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {combined_server_path_rel}")
 
-    class_
-    
-    cfg = {"none": ["none"]}
+    class_cfg = {"none": ["none"]}
+    show_times = True
+    show_shmoovin = True
+    show_sectors = True
     config_file_path = os.path.join(combined_server_path_rel,"discordbotcfg.json")
 
     if exists(config_file_path):
