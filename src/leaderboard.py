@@ -869,6 +869,8 @@ def main():
                     shmoovin_score_discord = "NA"
                     shmoovin_score_html = "NA"
                     
+                    initial_loop_finished = False
+
                     if server_type == "AssettoServer":
 
                         # sorts logs in a list by creation date with newest first
@@ -876,7 +878,7 @@ def main():
                         
                         for log_index, selected_log in enumerate(sorted_log_files):
 
-                            if log_index < log_lookback or log_index != (len(sorted_log_files)-1) : # checks if current logs are within the set amount of logs to look back at
+                            if (log_index < log_lookback or log_index != (len(sorted_log_files)-1)) and not initial_loop_finished : # checks if current logs are within the set amount of logs to look back at
                                 
                                 if log_index != (len(sorted_log_files)-1):
                                     previous_log = sorted_log_files[int(log_index + 1)]
@@ -887,8 +889,17 @@ def main():
 
                                 score_find(selected_log, previous_log, combined_server_path_rel)
                             
-                            else: # breaks for loop if log loopback count has been exceeded
+                            else: # breaks for loop if log loopback count has been exceeded or when initial loop is complete
+                                initial_loop_finished = True
+
+                                previous_log = sorted_log_files[int(log_index + 1)]
+
+                                logging.debug(f"Log file that is being read is: {str(selected_log)}")
+
+                                score_find(selected_log, previous_log, combined_server_path_rel)
+
                                 break
+
 
                         has_shmoovin, shmoovin_type = shmoovin_check(combined_server_path_rel)
                         
@@ -908,7 +919,7 @@ def main():
                 
             
             deletemessage(main_loop_counter)
-            delete_html(folders_in_servers_path )
+            delete_html(folders_in_servers_path)
         
         logging.debug(f"waiting for {interval} minutes")
         time.sleep(interval*60)
