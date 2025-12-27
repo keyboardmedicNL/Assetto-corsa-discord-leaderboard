@@ -1,7 +1,7 @@
-- add multiple messages to allow longer leaderboards (split per leaderboard type) (configurable)
 - change cfgs to yaml (with backwards compat support for json)
 - make cfg return false if no cfg found
 - split html and webhook logic to seperate modules
 - add color picker to embeds
-- refactor findtimevanilla
 - only allow script to loop back all the way once on script start
+- add discordbotcfg entries to sendtowebhook
+- move discordbotcfg to main

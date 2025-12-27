@@ -604,37 +604,25 @@ def sendtohtml(finalstr: str, finaltimes: str, hasshmoovin: bool, shmoovin_type:
         times_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>{finaltimes}\n{refresh_script}"
         
         times_html_file = os.path.join("html",f"{server_folder}-times.html")
-
-        if exists (times_html_file):
-            with open(times_html_file , encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
-                html_lap_times.seek(0)
-                html_lap_times.truncate()
-                html_lap_times.write(times_html)
-                logging.debug(f"wrote laptimes to {server_folder}-times.html")
-                logging.debug(f"html content:\n{times_html}\n")
-        else:
-            with open(times_html_file , encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
-                html_lap_times.write(times_html)
-                logging.debug(f"{server_folder}-times.html was created with laptimes")
-                logging.debug(f"html content:\n{times_html}\n")
+        edit_html(times_html_file, times_html)
     
     if hasshmoovin:
         shmoovin_html = f"{pre_html}<h1>{str(name)}</h1>\n</div>\n<div class=\"classbox\">\n<h3>{shmoovin_type}</h3>\n</div>\n{finalstr}\n{refresh_script}"
         
         shmoovin_html_file = os.path.join("html",f"{server_folder}-shmoovin.html")
-        if exists (shmoovin_html_file):
-            with open(shmoovin_html_file, encoding='utf-8', errors='ignore', mode="r+") as html_lap_times:
-                html_lap_times.seek(0)
-                html_lap_times.truncate()
-                html_lap_times.write(shmoovin_html)
-                logging.debug(f"wrote shmoovin scores to {server_folder}-shmoovin.html")
-                logging.debug(f"html content:\n{shmoovin_html}\n")
-        else:
-            with open(shmoovin_html_file, encoding='utf-8', errors='ignore', mode="w") as html_lap_times:
-                html_lap_times.write(shmoovin_html)
+        edit_html(shmoovin_html_file, shmoovin_html)
 
-                logging.debug(f"{server_folder}-shmoovin.html was created with shmoovin scores")
-                logging.debug(f"html content:\n{shmoovin_html}\n")
+def edit_html(file: str, html: str):
+    if exists (file):
+        with open(file, encoding='utf-8', errors='ignore', mode="r+") as html_file:
+            html_file.seek(0)
+            html_file.truncate()
+            html_file.write(html)
+            logging.debug(f"wrote html to {file} with content\n{html}")
+    else:
+        with open(file, encoding='utf-8', errors='ignore', mode="w") as html_file:
+            html_file.write(shmoovin_html)
+            logging.debug(f"created html in {file}, with content\n{html}")
 
 def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str = "N/A", lap_times: str = "N/A", sector_times: str = "N/A"):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
