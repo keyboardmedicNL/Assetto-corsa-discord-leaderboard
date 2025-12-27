@@ -152,6 +152,7 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
             if (input_match := (re.findall(r".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", input_line))) and (str(name) in input_line):
                 logging.debug(f"found input method on: {input_line.strip()}")
                 input_method = input_match[0]
+                break
 
     if input_method == "Unknown":
 
@@ -165,6 +166,7 @@ def input_find(index_log_line: int ,name: str, selected_log: str, previous_log: 
                 if (input_match := (re.findall(r".* \[INF\] CSP handshake received from.*InputMethod=\"(.*)\" .*", second_input_line))) and (str(name) in input_line):
                     logging.debug(f"found input method on: {second_input_line.strip()}")
                     input_method = input_match[0]
+                    break
 
         except:
             logging.debug(f"could not find input method for {str(name)}")
@@ -188,6 +190,7 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
             if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)-.* has connected", car_line))) and (str(name) in car_line):
                 logging.debug(f"found car on: {car_line.strip()}")
                 car = car_match[0]
+                break
 
     if car == "unknown":
 
@@ -200,6 +203,7 @@ def find_car(index_log_line: int ,name: str, selected_log: str, previous_log: st
             if (car_match := (re.findall(".* \[INF\] .* \(.*\((.*)-.* has connected", car_line))) and (str(name) in car_line):
                 logging.debug(f"found car on: {car_line.strip()}")
                 car = car_match[0]
+                break
 
     logging.debug(f"car = {car}")
     return(car)
