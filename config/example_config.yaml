@@ -1,0 +1,28 @@
+
+# required parameters:
+web_hook_url: Your_discord_webhook_url
+server_adress: 127.0.0.1 # ip to your server
+server_adress_display: 127.0.0.0 # ip to display in the leaderboards to allow users to connect
+folder_identifier: your_server_folder_identifier # a unique identifier in folder names that all your server folders have in common (used to filter out offline or motballed servers)
+servers_pathlst: # a list of folders to check for servers
+- path_to_your_assetto_servers_parent_folder
+
+# optional parameters
+#interval: 10 # time in minutes to check for new scores or entries
+#leaderboard_limit: 10 # amount of entries you want to display in your leaderboard
+#log_lookback: 10 # how many log files to look back for new scores or laptimes
+#banned_words: # a list of words to not display in the leaderboards
+#- penis
+#- vagina
+#- retard
+#drift_script:
+#- your_shmoovin_drift_script_url
+#overtake_script:
+#- your_shmoovin_overtake_script_url
+#show_input: false # wether or not to display input method in leaderboards (requires assettoserver plugin)
+#use_short_name: false # wether or not to shorten usernames in the leaderboards
+#only_leaderboards: false # wether or not to display the leaderboard with server info or just the leadeboards
+#time_before_retry: 60 # amount of time in seconds between retrying an http request if it errors out
+#max_errors_allowed: 3 # how many times an http request can error out before the script crashes
+
+

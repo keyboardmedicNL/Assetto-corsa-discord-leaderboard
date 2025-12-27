@@ -8,17 +8,17 @@ formatters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
+    level: INFO #set to DEBUG for debugging, INFO for normal console logging
     formatter: standard
     stream: ext://sys.stdout
 
   file:
     class: logging.FileHandler
-    level: DEBUG
+    level: INFO #set to DEBUG for debugging. INFO for normal console logging
     formatter: standard
     filename: ./config/assetto_bot.log
     encoding: utf-8
 
 root:
-  level: DEBUG # change this value to DEBUG for debugging messages in log
+  level: INFO # change this value to DEBUG for debugging messages in log, INFO for normal console logging
   handlers: [console, file]
