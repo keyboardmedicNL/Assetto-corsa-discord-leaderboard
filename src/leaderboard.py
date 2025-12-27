@@ -785,7 +785,8 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
         logging.debug(f"json data being send to webhook is: \n{data}\n")
 
         request_json = requests_error_handler.handle_request_error(request_type="post", request_url=webhookurl, request_json=data, request_params={'wait': 'true'})
-        messageid = request_json["id"]
+        jsonifyd_request = request_json.json()
+        messageid = jsonifyd_request["id"]
 
         if not exists("config/messages"):
             os.mkdir("config/messages")
