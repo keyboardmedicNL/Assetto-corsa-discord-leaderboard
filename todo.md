@@ -1,0 +1,2 @@
+- ignore fucked entries in leaderboard files
+- fix log lookback error index out of range

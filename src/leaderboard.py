@@ -39,6 +39,12 @@ color_list = [
     0xE3C800
     ]
 
+def sanitize_filename(name: str, replacement: str="_") -> str:
+    sanitized = re.sub(r'[<>:"/\\|?*\x00-\x1F]', replacement, name)
+    sanitized = sanitized.strip(" .")
+
+    return sanitized if sanitized else "unnamed"
+
 def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
     logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
     
@@ -54,12 +60,12 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
             scripttype = scripttype.replace("'","")
 
             if scripttype in config.overtake_script:
-                shmoovin_type = "Shmoovin overtake leaderboard"
+                shmoovin_type = "overtake"
                 has_shmoovin = True
                 logging.debug(f"shmoovin was found with the type = overtake")
 
             elif scripttype in config.drift_script:
-                shmoovin_type = "Shmoovin drift leaderboard"
+                shmoovin_type = "drift"
                 has_shmoovin = True
                 logging.debug(f"shmoovin was found with the type = drift")
         except:
@@ -184,6 +190,7 @@ def score_find_additional(name: str,score: float, leaderboard_file_name: str,ind
     name_allowed = check_name(name)
 
     if "-sector.txt" in leaderboard_file_name:
+        leaderboard_file_name = sanitize_filename(leaderboard_file_name)
         minutes,seconds = score.split(":")
         score = float(float(minutes)*60000)+float(float(seconds)*1000)
 
@@ -671,7 +678,7 @@ def edit_html(file: str, html: str):
             html_file.write(html)
             logging.debug(f"created html in {file}, with content\n{html}")
 
-def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: str, show_times: bool, show_shmoovin: bool, show_sectors: bool):
+def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: str, show_times: bool, show_shmoovin: bool, show_sectors: bool, shmoovin_type: str):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -759,7 +766,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                             "value": sector_times,
                         },
                         {
-                            "name": f"Shmoovin score",
+                            "name": f"Shmoovin {shmoovin_type} score",
                             "value": shmoovin_score,
                         },
                         {
@@ -787,7 +794,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                             "value": sector_times,
                         },
                         {
-                            "name": f"Shmoovin score",
+                            "name": f"Shmoovin {shmoovin_type} score",
                             "value": shmoovin_score,
                         },
                         {
@@ -883,7 +890,6 @@ def main():
         for servers_path in config.servers_pathlst:
             #set default vars for use in instance of loop // replace with defaults in functions later
             has_shmoovin = False
-            shmoovin_type = ""
 
             folders_in_servers_path= os.listdir(str(servers_path))
 
@@ -891,7 +897,7 @@ def main():
             logging.debug(f"checking {config.log_lookback} logs back for entries")
 
             for server_folder in folders_in_servers_path:
-
+                
                 combined_server_path_rel = os.path.join(servers_path,server_folder)
                 
                 # checks if folder is actually a server folder
@@ -912,6 +918,7 @@ def main():
 
                     shmoovin_score_discord = "NA"
                     shmoovin_score_html = "NA"
+                    shmoovin_type = ""
 
                     if server_type == "AssettoServer":
 
@@ -933,8 +940,11 @@ def main():
                             
                             else: # breaks for loop if log loopback count has been exceeded or when initial loop is complete
 
-                                previous_log = sorted_log_files[int(log_index + 1)]
-
+                                try:
+                                    previous_log = sorted_log_files[int(log_index + 1)]
+                                except:
+                                    previous_log = selected_log
+                                
                                 logging.debug(f"Log file that is being read is: {str(selected_log)}")
 
                                 score_find(selected_log, previous_log, combined_server_path_rel)
@@ -955,7 +965,7 @@ def main():
                     laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
                     laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", config.show_input, config.use_short_name, server_type)
                     
-                    send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors)
+                    send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors, shmoovin_type)
                     send_to_html(shmoovin_score_html, laptimes_html, sector_times_html, shmoovin_type, combined_server_path_rel, server_folder)
                 
             
@@ -1034,5 +1044,7 @@ if __name__ == "__main__":
         create_yaml(config_for_yaml,"config/config.yaml")   
         
         logging.debug("succesfully loaded legacy config")
+
+    sys.excepthook = housey_logging.log_exception
 
     main()
