@@ -50,10 +50,12 @@ def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
 
     return(has_shmoovin,shmoovin_type)
 
-def get_class_cfg(combined_server_path_rel: str) -> any:
+def get_server_cfg(combined_server_path_rel: str) -> tuple(dict, bool, bool, bool):
     logging.debug(f"Checking if class_cfg exsists in discordbotcfg.ini for server {combined_server_path_rel}")
 
-    classcfg = {"none": ["none"]}
+    class_
+    
+    cfg = {"none": ["none"]}
     config_file_path = os.path.join(combined_server_path_rel,"discordbotcfg.json")
 
     if exists(config_file_path):
@@ -61,14 +63,34 @@ def get_class_cfg(combined_server_path_rel: str) -> any:
             configJson = json.load(config)
         
         try:
-            classcfg = configJson["classes"]
-        
+            class_cfg = configJson["classes"]
         except:
-            logging.debug(f"discordcfg was found but no classcfg present")
+            pass
 
-    logging.debug(f"classcfg = {classcfg}")
+        try:
+            show_times = configJson["showlaptimes"]
+            if show_times.lower() == "false":
+                show_times = False
+        except:
+            pass
 
-    return(classcfg)
+        try:
+            show_shmoovin = configJson["showshmoovin"]
+            if show_shmoovin.lower() == "false":
+                show_shmoovin = False
+        except:
+            pass
+
+        try:
+            show_sectors = configJson["showsectors"]
+            if show_sectors.lower() == "false":
+                show_sectors = False
+        except:
+            pass
+
+    logging.debug(f"class_cfg = {class_cfg}, showtimes = {str(show_times)}, showshmoovin = {str(show_shmoovin)}")
+
+    return(class_cfg, show_times, show_shmoovin, show_sectors)
 
 # checks if server folder contains assettoserver.exe or acserver.exe used to filter results
 def server_type_check(combined_server_path_rel: str) -> str:
@@ -624,7 +646,7 @@ def edit_html(file: str, html: str):
             html_file.write(shmoovin_html)
             logging.debug(f"created html in {file}, with content\n{html}")
 
-def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str = "N/A", lap_times: str = "N/A", sector_times: str = "N/A"):
+def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: str, show_times: bool, show_shmoovin: bool, show_sectors: bool):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -633,24 +655,12 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     name = str(configp['SERVER']['NAME'])
 
     # checks if laptimes and shmoovin score should be shown
-    showtimes = True
-    discordbotcfg_file = os.path.join(combined_server_path_rel,"discordbotcfg.json")
-
-    if exists(discordbotcfg_file):
-        with open(discordbotcfg_file) as config:
-            configJson = json.load(config)
-        try:
-            showtimes = configJson["showlaptimes"]
-            if showtimes.lower() == "false":
-                showtimes = False
-        except:
-            pass
-        try:
-            hasshmoovin = configJson["showshmoovin"]
-            if hasshmoovin.lower() == "false":
-                hasshmoovin = False
-        except:
-            pass
+    if not show_times:
+        lap_times = "NA"
+    if not show_shmoovin:
+        shmoovin_score = "NA"
+    if not show_sectors:
+        sector_times = "NA"
     
     # checks if full server status should be shown and formats data for it
     if onlyleaderboards.lower() == "false":
@@ -820,6 +830,19 @@ def delete_html(server_folders: list):
             os.remove(os.path.join("html",html_file))
             logging.debug(f"remove {html_file} because it is no longer used")
 
+def read_server_config(combined_server_path_rel: str):
+    discordbotcfg_file = os.path.join(combined_server_path_rel,"discordbotcfg.json")
+
+    if exists(discordbotcfg_file):
+        with open(discordbotcfg_file) as config:
+            configJson = json.load(config)
+        try:
+            showtimes = configJson["showlaptimes"]
+            if showtimes.lower() == "false":
+                showtimes = False
+        except:
+            pass
+
 def main():
     logging.info("Starting assetto discord leaderboards...")
     logging.info("Only errors will be displayed here unless otherwise configured.....")
@@ -850,7 +873,7 @@ def main():
                     has_score_file_check("leaderboard.txt",combined_server_path_rel)
                     has_score_file_check("laptimes.txt",combined_server_path_rel)
                     server_type = server_type_check(combined_server_path_rel)
-                    class_cfg = get_class_cfg(combined_server_path_rel)
+                    class_cfg, show_times, show_shmoovin, show_sectors = get_server_cfg(combined_server_path_rel)
 
                     laptimes_discord = "NA"
                     laptimes_html = "NA"
@@ -896,7 +919,7 @@ def main():
                     laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
                     laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", show_input, use_short_name)
                     
-                    send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord)
+                    send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors)
                     #sendtohtml(shmoovin_score_discord,finaltimes_html,has_shmoovin,shmoovin_type, combined_server_path_rel, server_folder)
                 
             
