@@ -15,7 +15,6 @@ import datetime
 from datetime import timezone
 import sys
 import yaml
-import color_picker
 import requests_error_handler
 import config_loader
 
