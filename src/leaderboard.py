@@ -285,7 +285,7 @@ def write_score(name, score, car, input_method, leaderboard_file_name, combined_
         score_file.truncate()
         score_file.write(''.join(score_file_lines + score_file_lines_new))
         
-        logging.debug(f"content that was written to {leaderboard_file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
+        #logging.debug(f"content that was written to {leaderboard_file_name} = \n{''.join(score_file_lines + score_file_lines_new)}")
         
 # find laptimes for acServer sessions
 def findtimevanilla(combined_server_path_rel):
@@ -830,11 +830,12 @@ def delete_html(server_folders: list):
 def main():
     logging.info("Starting assetto discord leaderboards...")
     logging.info("Only errors will be displayed here unless otherwise configured.....")
+    initial_loop_finished = False
 
     while True:
         # loop trough folders in server folder
         main_loop_counter = -1
-        
+    
         for servers_path in servers_pathlst:
             #set default vars for use in instance of loop // replace with defaults in functions later
             has_shmoovin = False
@@ -868,8 +869,6 @@ def main():
 
                     shmoovin_score_discord = "NA"
                     shmoovin_score_html = "NA"
-                    
-                    initial_loop_finished = False
 
                     if server_type == "AssettoServer":
 
@@ -878,7 +877,7 @@ def main():
                         
                         for log_index, selected_log in enumerate(sorted_log_files):
 
-                            if (log_index < log_lookback or log_index != (len(sorted_log_files)-1)) and not initial_loop_finished : # checks if current logs are within the set amount of logs to look back at
+                            if (log_index < log_lookback and log_index != (len(sorted_log_files)-1)) and not initial_loop_finished : # checks if current logs are within the set amount of logs to look back at
                                 
                                 if log_index != (len(sorted_log_files)-1):
                                     previous_log = sorted_log_files[int(log_index + 1)]
@@ -890,7 +889,6 @@ def main():
                                 score_find(selected_log, previous_log, combined_server_path_rel)
                             
                             else: # breaks for loop if log loopback count has been exceeded or when initial loop is complete
-                                initial_loop_finished = True
 
                                 previous_log = sorted_log_files[int(log_index + 1)]
 
@@ -920,7 +918,8 @@ def main():
             
             deletemessage(main_loop_counter)
             delete_html(folders_in_servers_path)
-        
+
+        initial_loop_finished = True
         logging.debug(f"waiting for {interval} minutes")
         time.sleep(interval*60)
 

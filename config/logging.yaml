@@ -16,7 +16,7 @@ handlers:
     class: logging.FileHandler
     level: DEBUG
     formatter: standard
-    filename: ./config/going_live.log
+    filename: ./config/assetto_bot.log
     encoding: utf-8
 
 root:
