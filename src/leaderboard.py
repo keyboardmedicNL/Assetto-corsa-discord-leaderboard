@@ -467,6 +467,7 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
 
             # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over, adds all cars to one big pool if classcfg does not exsist
             if str(carname_split[0]) in str(classcfg[class_selected]) or class_selected == "none":
+                print("ping")
                 allready_in = False
                 
                 for index_entry,entry in enumerate(filtered):
@@ -488,7 +489,7 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
                 if not allready_in:
                     filtered.append(score)
 
-    filtered_times.append(filtered)
+        filtered_times.append(filtered)
     
     logging.debug(f"sorted scores for server {combined_server_path_rel} with type {score_type}")
     logging.debug(f"filtered times = \n{filtered_times}")
@@ -855,7 +856,7 @@ def delete_message(main_loop_counter: int):
             rl = requests.delete(f"{config.web_hook_url}/messages/{message_id}",params={'wait': 'true'})
             time.sleep(1)
 
-            request_url_combined = f"{config.web_hook_url}/messages/{messageid}"
+            request_url_combined = f"{config.web_hook_url}/messages/{message_id}"
             request_json = requests_error_handler.handle_request_error(request_type="delete", request_url=request_url_combined, request_params={'wait': 'true'}, status_type_ok=[204])
 
             os.remove(f"config/messages/{message}")
