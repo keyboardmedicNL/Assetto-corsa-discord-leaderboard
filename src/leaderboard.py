@@ -44,6 +44,12 @@ def sanitize_filename(name: str, replacement: str="_") -> str:
 
     return sanitized if sanitized else "unnamed"
 
+def sanitize_username(name: str, replacement: str="_") -> str:
+    sanitized = re.sub(r',', replacement, name)
+    sanitized = sanitized.strip(" .")
+
+    return sanitized if sanitized else "unnamed"
+
 def shmoovin_check(combined_server_path_rel: str) -> tuple[str, str]:
     logging.debug(f"Checking if shmoovin exsists in csp_extra_options.ini for server {combined_server_path_rel}")
     
@@ -273,6 +279,8 @@ def write_score(name, score, car, input_method, leaderboard_file_name, combined_
 
     logging.debug(f"attempting to write found score to {leaderboard_file_name}") 
     
+    name = sanitize_username(name)
+
     try:
          with open(f"{os.path.join(combined_server_path_rel,leaderboard_file_name)}", encoding='utf-8', errors='ignore', mode="x"):
             pass
