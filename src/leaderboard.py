@@ -467,7 +467,6 @@ def sort_score(score_type: str, classcfg: dict, combined_server_path_rel: str) -
 
             # checks if carname that is recorded exsists in the classcfg list that it is currently itterating over, adds all cars to one big pool if classcfg does not exsist
             if str(carname_split[0]) in str(classcfg[class_selected]) or class_selected == "none":
-                print("ping")
                 allready_in = False
                 
                 for index_entry,entry in enumerate(filtered):
@@ -568,27 +567,27 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
 
 def format_sector(show_input_sector: bool, use_short_name: bool, combined_server_path_rel: str, classcfg) -> tuple[str, str]:
     server_files = os.listdir(combined_server_path_rel)
-    combined_sectors = []
+    combined_sectors = {}
     combined_sectors_html = []
+    final_sectors = []
     
     for sector_file in server_files:
         if "-sector.txt" in str(sector_file):
             scores = sort_score(sector_file ,classcfg, combined_server_path_rel)
             times, times_html = format_scores(scores, classcfg, str(sector_file), show_input_sector, use_short_name)
             sector_name = str(sector_file.split("-sector")[0])
-            combined_sectors.append(f"\n**{sector_name}**\n")
-            combined_sectors.append(times)
+            combined_sectors = {"name":sector_name,"value":times}
+            final_sectors.append(combined_sectors)
             combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
             combined_sectors_html.append(times_html)
 
     if combined_sectors:
-        final_sector_str = "".join(combined_sectors)
         final_sector_str_html = "".join(combined_sectors_html)
     else:
         final_sector_str = "NA"
         final_sector_str_html = "NA"
 
-    return(final_sector_str,final_sector_str_html)
+    return(final_sectors,final_sector_str_html)
 
 def send_to_html(shmoovin_score: str, lap_times: str, sector_times: str, shmoovin_type: str, combined_server_path_rel: str, server_folder: str):
     logging.debug(f"attempting to send formatted scores to html for server {combined_server_path_rel}") 
@@ -686,7 +685,7 @@ def edit_html(file: str, html: str):
             html_file.write(html)
             logging.debug(f"created html in {file}, with content\n{html}")
 
-def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: str, show_times: bool, show_shmoovin: bool, show_sectors: bool, shmoovin_type: str):
+def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: list, show_times: bool, show_shmoovin: bool, show_sectors: bool, shmoovin_type: str):
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -700,7 +699,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     if not show_shmoovin:
         shmoovin_score = "NA"
     if not show_sectors:
-        sector_times = "NA"
+        sector_times = {"name":"sector times","value":"NA"}
     
     # checks if full server status should be shown and formats data for it
     if not config.only_leaderboards:
@@ -737,79 +736,72 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     else:
         color = color_list[main_loop_counter]
 
+    field_basics = [
+            {
+                "name": f":race_car:",
+                "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={config.server_adress_display}&httpport={http_port})",
+            },
+            {
+                "name": "Status",
+                "value": status,
+                "inline": "true" 
+            },
+            {
+                "name": "Players",
+                "value": f":busts_in_silhouette: {clients}/{maxplayers}",
+                "inline": "true" 
+            },
+            {
+                "name": "Track",
+                "value": track,
+                "inline": "true" 
+            }
+        ]
+    
+    fields_laptimes = [
+            {
+                "name": "Laptimes",
+                "value": lap_times,
+            }
+        ]
+
+    fields_post = [
+            {
+                "name": f"Shmoovin {shmoovin_type} score",
+                "value": shmoovin_score,
+            },
+            {
+                "name": "",
+                "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
+            }
+        ]
+
     # returns correct format based on selected parameters
     if not config.only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
+        
+        fields = field_basics + fields_laptimes + sector_times + fields_post
+        
         data = {"embeds": [
                 {
                     "title": name,
                     "description":"",
                     "color": color,
-                    "fields": [
-                        {
-                            "name": f":race_car:",
-                            "value": f"[***Click here to connect***](https://acstuff.ru/s/q:race/online/join?ip={config.server_adress_display}&httpport={http_port})",
-                        },
-                        {
-                            "name": "Status",
-                            "value": status,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Players",
-                            "value": f":busts_in_silhouette: {clients}/{maxplayers}",
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Track",
-                            "value": track,
-                            "inline": "true" 
-                        },
-                        {
-                            "name": "Laptimes",
-                            "value": lap_times,
-                        },
-                        {
-                            "name": "sector times",
-                            "value": sector_times,
-                        },
-                        {
-                            "name": f"Shmoovin {shmoovin_type} score",
-                            "value": shmoovin_score,
-                        },
-                        {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
+                    "fields": fields,
                         "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
     else:
         logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
+        
+        fields = fields_laptimes + sector_times + fields_post
+        
         data = {"embeds": [
                 {
                     "title": name,
                     "description":"",
                     "color": color,
-                    "fields": [
-                        {
-                            "name": "Laptimes",
-                            "value": lap_times,
-                        },
-                        {
-                            "name": "sector times",
-                            "value": sector_times,
-                        },
-                        {
-                            "name": f"Shmoovin {shmoovin_type} score",
-                            "value": shmoovin_score,
-                        },
-                        {
-                            "name": "",
-                            "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
-                        }
-                    ],
+                    "fields": fields,
                         "timestamp": datetime.datetime.now(timezone.utc).isoformat()
                 }
             ]}
