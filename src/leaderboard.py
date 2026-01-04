@@ -584,7 +584,7 @@ def format_sector(show_input_sector: bool, use_short_name: bool, combined_server
     if combined_sectors:
         final_sector_str_html = "".join(combined_sectors_html)
     else:
-        final_sector_str = "NA"
+        final_sector_str = ""
         final_sector_str_html = "NA"
 
     return(final_sectors,final_sector_str_html)
@@ -913,7 +913,7 @@ def main():
                     laptimes_html = "NA"
                     main_loop_counter = main_loop_counter+1
                     
-                    sector_times_discord = "NA"
+                    sector_times_discord = []
                     sector_times_html = "NA"
 
                     shmoovin_score_discord = "NA"
