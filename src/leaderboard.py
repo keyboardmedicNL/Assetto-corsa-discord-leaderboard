@@ -500,7 +500,6 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
     
     finallist = []
     finallist_html = []
-    
             
     for i,score in enumerate(scores):
         classname = list(classcfg)[i]
@@ -547,9 +546,9 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
                             combined_score_name = f"{score_type} Times"
                     else:
                         if str(classname) != "none":
-                            combined_score_name = f"Times {classname}"
+                            combined_score_name = f"Laptimes {classname}"
                         else:
-                            combined_score_name = f"Times"
+                            combined_score_name = f"Laptimes"
                 
                 score_input = classcore[3].strip()
                 
@@ -574,7 +573,16 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
             else:
                 break
 
-    class_scores_str = "".join(class_scores)
+    total_length = 0
+    class_scores_str = ""
+    for entry in class_scores:
+        total_length = total_length + len(entry)
+
+        if total_length < 1024:
+            class_scores_str = class_scores_str + str(entry)    
+        else:
+            break
+
     if class_scores_str:
         class_scores_object = {"name":combined_score_name,"value":class_scores_str}
         finallist.append(class_scores_object)
@@ -786,18 +794,16 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             }
         ]
 
+    fields_sectors = []
+    for sectors in sector_times:
+            for sector_entry in sectors:
+                fields_sectors.append(sector_entry)
+
     # returns correct format based on selected parameters
     if not config.only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         
-        
-        fields = field_basics + lap_times
-        
-        for sectors in sector_times:
-            for sector_entry in sectors:
-                fields.append(sector_entry)
-
-        fields = fields + shmoovin_score + fields_post
+        fields = field_basics + lap_times + fields_sectors + shmoovin_score + fields_post
         
         data = {"embeds": [
                 {
@@ -811,7 +817,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     else:
         logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
         
-        fields = lap_times + sector_times + shmoovin_score + fields_post
+        fields = lap_times + fields_sectors + shmoovin_score + fields_post
         
         data = {"embeds": [
                 {

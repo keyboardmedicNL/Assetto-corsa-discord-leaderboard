@@ -1,3 +1,3 @@
 - ignore fucked entries in leaderboard files
-- make bot select leaderboardlimit dynamicly
+- split leaderboard entries based on total chars or length of field entries to multiple embeds
 - find online profanity list to use by default
