@@ -499,92 +499,111 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
     logging.debug(f"attempting to format scores with type {score_type} with classcfg {classcfg}") 
     
     finallist = []
-    classlist = []
     finallist_html = []
     
     for classname in classcfg:
-        classlist.append(classname)
+        class_scores = []
+        class_scores_object= {}
+            
     
-    for i,score in enumerate(scores):
-        scorelength = len(score)
-        scorecounter = 0
-        
-        if scorelength > 0:
-            
-            if str(classlist[i]) != "none":
-                finallist.append(f"***{str(classlist[i])}***:\n")
-                finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classlist[i])}</h3>\n</div>\n")
-        
-        if scorelength >= config.leaderboard_limit:
-            scorelength = config.leaderboard_limit
-        
-        for classcore in scores[i]:
-            scorecounter = scorecounter + 1
-            
-            if scorecounter <= scorelength:
-                
-                if score_type == "leaderboard":
-                    score_format = float(classcore[2])
-                
-                else:
-                    laptime = float(classcore[2])
-                    minutes= math.floor(laptime/(1000*60)%60)
-                    laptime = (laptime-(minutes*(1000*60)))
-                    seconds = (laptime/1000)
-                    score_format = f"{minutes}:{seconds}"
-                
-                score_input = classcore[3].strip()
-                
-                if show_input_discord and not use_short_name and server_type != "acserver":
-                    finallist.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
-                
-                elif show_input_discord and use_short_name and server_type != "acserver":
-                    short_name = str(classcore[1])[0:6]
-                    finallist.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
-                
-                elif use_short_name:
-                    short_name = str(classcore[1])[0:6]
-                    finallist.append(f"{scorecounter}.{short_name} {score_format}\n")
+        for i,score in enumerate(scores):
 
-                else:
-                    finallist.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
+            scorelength = len(score)
+            scorecounter = 0
+            
+            if scorelength > 0:
                 
-                short_name = str(classcore[1])[0:6]
-                html_score_format = f"<b>{short_name}</b> {score_format}"
-                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
-    
-    finalstr = "".join(finallist)
+                if str(classname) != "none":
+                    finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classname)}</h3>\n</div>\n")
+            
+            if scorelength >= config.leaderboard_limit:
+                scorelength = config.leaderboard_limit
+            
+            for classcore in scores[i]:
+                scorecounter = scorecounter + 1
+                
+                if scorecounter <= scorelength:
+                    
+                    if score_type == "overtake" or score_type == "drift":
+                        score_format = float(classcore[2])
+
+                        # sets name of entry to correct value for shmoovin with or without classes
+                        if str(classname) != "none":
+                            combined_score_name = f"{score_type} {classname} leaderboard"
+                        else:
+                            combined_score_name = f"{score_type} leaderboard"
+                    
+                    else:
+                        laptime = float(classcore[2])
+                        minutes= math.floor(laptime/(1000*60)%60)
+                        laptime = (laptime-(minutes*(1000*60)))
+                        seconds = (laptime/1000)
+                        score_format = f"{minutes}:{seconds}"
+
+                        # sets name of entry to correct value for sectors or just laptimes with or without classes
+                        if score_type:
+                            if str(classname) != "none":
+                                combined_score_name = f"{score_type} {classname} Times"
+                            else:
+                                combined_score_name = f"{score_type} Times"
+                        else:
+                            if str(classname) != "none":
+                                combined_score_name = f"Times {classname}"
+                            else:
+                                combined_score_name = f"Times"
+                    
+                    score_input = classcore[3].strip()
+                    
+                    if show_input_discord and not use_short_name and server_type != "acserver":
+                        class_scores.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
+                    
+                    elif show_input_discord and use_short_name and server_type != "acserver":
+                        short_name = str(classcore[1])[0:6]
+                        class_scores.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
+                    
+                    elif use_short_name:
+                        short_name = str(classcore[1])[0:6]
+                        class_scores.append(f"{scorecounter}.{short_name} {score_format}\n")
+
+                    else:
+                        class_scores.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
+                    
+                    short_name = str(classcore[1])[0:6]
+                    html_score_format = f"<b>{short_name}</b> {score_format}"
+                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+        
+        class_scores_str = "".join(class_scores)
+        if class_scores_str:
+            class_scores_object = {"name":combined_score_name,"value":class_scores_str}
+            finallist.append(class_scores_object)
+
     finalstr_html = "".join(finallist_html)
     
-    if finalstr == "":
-        finalstr = "NA"
+    if not finallist:
         finalstr_html = "<div class=\"namebox\">\n<p>NA</p>\n</div>\n"
     
-    logging.debug(f"formatted scores for discord = \n{finalstr}")
+    logging.debug(f"formatted scores for discord = \n{finallist}")
     logging.debug(f"formatted scores for html = \n{finalstr_html}")
 
-    return(finalstr, finalstr_html)
+    return(finallist, finalstr_html)
 
 def format_sector(show_input_sector: bool, use_short_name: bool, combined_server_path_rel: str, classcfg) -> tuple[str, str]:
     server_files = os.listdir(combined_server_path_rel)
-    combined_sectors = {}
     combined_sectors_html = []
     final_sectors = []
     
     for sector_file in server_files:
         if "-sector.txt" in str(sector_file):
             scores = sort_score(sector_file ,classcfg, combined_server_path_rel)
-            times, times_html = format_scores(scores, classcfg, str(sector_file), show_input_sector, use_short_name)
             sector_name = str(sector_file.split("-sector")[0])
-            combined_sectors = {"name":sector_name,"value":times}
-            final_sectors.append(combined_sectors)
+            times, times_html = format_scores(scores, classcfg, str(sector_name), show_input_sector, use_short_name)
+            final_sectors.append(times)
             combined_sectors_html.append(f"\n<div class=\"sectorbox\">\n<h3>{sector_name}</h3>\n</div>\n")
             combined_sectors_html.append(times_html)
 
-    if combined_sectors:
+    if final_sectors:
         final_sector_str_html = "".join(combined_sectors_html)
     else:
-        final_sector_str = ""
         final_sector_str_html = "NA"
 
     return(final_sectors,final_sector_str_html)
@@ -695,11 +714,11 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
 
     # checks if laptimes and shmoovin score should be shown
     if not show_times:
-        lap_times = "NA"
+        lap_times = []
     if not show_shmoovin:
-        shmoovin_score = "NA"
+        shmoovin_score = []
     if not show_sectors:
-        sector_times = {"name":"sector times","value":"NA"}
+        sector_times = []
     
     # checks if full server status should be shown and formats data for it
     if not config.only_leaderboards:
@@ -757,19 +776,8 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                 "inline": "true" 
             }
         ]
-    
-    fields_laptimes = [
-            {
-                "name": "Laptimes",
-                "value": lap_times,
-            }
-        ]
 
     fields_post = [
-            {
-                "name": f"Shmoovin {shmoovin_type} score",
-                "value": shmoovin_score,
-            },
             {
                 "name": "",
                 "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
@@ -780,7 +788,14 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     if not config.only_leaderboards:
         logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         
-        fields = field_basics + fields_laptimes + sector_times + fields_post
+        
+        fields = field_basics + lap_times
+        
+        for sectors in sector_times:
+            for sector_entry in sectors:
+                fields.append(sector_entry)
+
+        fields = fields + shmoovin_score + fields_post
         
         data = {"embeds": [
                 {
@@ -794,7 +809,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     else:
         logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
         
-        fields = fields_laptimes + sector_times + fields_post
+        fields = lap_times + sector_times + shmoovin_score + fields_post
         
         data = {"embeds": [
                 {
@@ -916,7 +931,7 @@ def main():
                     sector_times_discord = []
                     sector_times_html = "NA"
 
-                    shmoovin_score_discord = "NA"
+                    shmoovin_score_discord = []
                     shmoovin_score_html = "NA"
                     shmoovin_type = ""
 
@@ -956,14 +971,14 @@ def main():
                         
                         if has_shmoovin:
                             sorted_scores = sort_score("leaderboard.txt",class_cfg,combined_server_path_rel)
-                            shmoovin_score_discord, shmoovin_score_html = format_scores(sorted_scores, class_cfg, "leaderboard", config.show_input, config.use_short_name)
+                            shmoovin_score_discord, shmoovin_score_html = format_scores(sorted_scores, class_cfg, shmoovin_type, config.show_input, config.use_short_name)
                         sector_times_discord, sector_times_html = format_sector(config.show_input, config.use_short_name, combined_server_path_rel, class_cfg)
                     
                     elif server_type == "acServer":
                         find_time_vanilla(combined_server_path_rel)
                     
                     laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
-                    laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "laptimes", config.show_input, config.use_short_name, server_type)
+                    laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "", config.show_input, config.use_short_name, server_type)
                     
                     send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors, shmoovin_type)
                     send_to_html(shmoovin_score_html, laptimes_html, sector_times_html, shmoovin_type, combined_server_path_rel, server_folder)
