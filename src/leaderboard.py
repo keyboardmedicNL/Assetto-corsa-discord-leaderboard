@@ -501,81 +501,83 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
     finallist = []
     finallist_html = []
     
-    for classname in classcfg:
+            
+    for i,score in enumerate(scores):
+        classname = list(classcfg)[i]
         class_scores = []
         class_scores_object= {}
-            
-    
-        for i,score in enumerate(scores):
-
-            scorelength = len(score)
-            scorecounter = 0
-            
-            if scorelength > 0:
-                
-                if str(classname) != "none":
-                    finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classname)}</h3>\n</div>\n")
-            
-            if scorelength >= config.leaderboard_limit:
-                scorelength = config.leaderboard_limit
-            
-            for classcore in scores[i]:
-                scorecounter = scorecounter + 1
-                
-                if scorecounter <= scorelength:
-                    
-                    if score_type == "overtake" or score_type == "drift":
-                        score_format = float(classcore[2])
-
-                        # sets name of entry to correct value for shmoovin with or without classes
-                        if str(classname) != "none":
-                            combined_score_name = f"{score_type} {classname} leaderboard"
-                        else:
-                            combined_score_name = f"{score_type} leaderboard"
-                    
-                    else:
-                        laptime = float(classcore[2])
-                        minutes= math.floor(laptime/(1000*60)%60)
-                        laptime = (laptime-(minutes*(1000*60)))
-                        seconds = (laptime/1000)
-                        score_format = f"{minutes}:{seconds}"
-
-                        # sets name of entry to correct value for sectors or just laptimes with or without classes
-                        if score_type:
-                            if str(classname) != "none":
-                                combined_score_name = f"{score_type} {classname} Times"
-                            else:
-                                combined_score_name = f"{score_type} Times"
-                        else:
-                            if str(classname) != "none":
-                                combined_score_name = f"Times {classname}"
-                            else:
-                                combined_score_name = f"Times"
-                    
-                    score_input = classcore[3].strip()
-                    
-                    if show_input_discord and not use_short_name and server_type != "acserver":
-                        class_scores.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
-                    
-                    elif show_input_discord and use_short_name and server_type != "acserver":
-                        short_name = str(classcore[1])[0:6]
-                        class_scores.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
-                    
-                    elif use_short_name:
-                        short_name = str(classcore[1])[0:6]
-                        class_scores.append(f"{scorecounter}.{short_name} {score_format}\n")
-
-                    else:
-                        class_scores.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
-                    
-                    short_name = str(classcore[1])[0:6]
-                    html_score_format = f"<b>{short_name}</b> {score_format}"
-                    finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
         
-        class_scores_str = "".join(class_scores)
-        if class_scores_str:
-            class_scores_object = {"name":combined_score_name,"value":class_scores_str}
-            finallist.append(class_scores_object)
+        scorelength = len(score)
+        scorecounter = 0
+        
+        if scorelength > 0:
+            
+            if str(classname) != "none":
+                finallist_html.append(f"\n<div class=\"classbox\">\n<h3>{str(classname)}</h3>\n</div>\n")
+        
+        if scorelength >= config.leaderboard_limit:
+            scorelength = config.leaderboard_limit
+        
+        for classcore in score:
+            scorecounter = scorecounter + 1
+            
+            if scorecounter <= scorelength:
+                
+                if score_type == "overtake" or score_type == "drift":
+                    score_format = float(classcore[2])
+
+                    # sets name of entry to correct value for shmoovin with or without classes
+                    if str(classname) != "none":
+                        combined_score_name = f"{score_type} {classname} leaderboard"
+                    else:
+                        combined_score_name = f"{score_type} leaderboard"
+                
+                else:
+                    laptime = float(classcore[2])
+                    minutes= math.floor(laptime/(1000*60)%60)
+                    laptime = (laptime-(minutes*(1000*60)))
+                    seconds = (laptime/1000)
+                    score_format = f"{minutes}:{seconds}"
+
+                    # sets name of entry to correct value for sectors or just laptimes with or without classes
+                    if score_type:
+                        if str(classname) != "none":
+                            combined_score_name = f"{score_type} {classname} Times"
+                        else:
+                            combined_score_name = f"{score_type} Times"
+                    else:
+                        if str(classname) != "none":
+                            combined_score_name = f"Times {classname}"
+                        else:
+                            combined_score_name = f"Times"
+                
+                score_input = classcore[3].strip()
+                
+                if show_input_discord and not use_short_name and server_type != "acserver":
+                    class_scores.append(f"{scorecounter}. {classcore[1]} - {score_input} - {score_format}\n")
+                
+                elif show_input_discord and use_short_name and server_type != "acserver":
+                    short_name = str(classcore[1])[0:6]
+                    class_scores.append(f"{scorecounter}.{short_name} {score_input} {score_format}\n")
+                
+                elif use_short_name:
+                    short_name = str(classcore[1])[0:6]
+                    class_scores.append(f"{scorecounter}.{short_name} {score_format}\n")
+
+                else:
+                    class_scores.append(f"{scorecounter}. {classcore[1]} - {score_format}\n")
+                
+                short_name = str(classcore[1])[0:6]
+                html_score_format = f"<b>{short_name}</b> {score_format}"
+                finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
+            
+            else:
+                break
+
+    class_scores_str = "".join(class_scores)
+    if class_scores_str:
+        class_scores_object = {"name":combined_score_name,"value":class_scores_str}
+        finallist.append(class_scores_object)
 
     finalstr_html = "".join(finallist_html)
     

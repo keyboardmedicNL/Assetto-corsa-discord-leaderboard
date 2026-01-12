@@ -1,4 +1,3 @@
 - ignore fucked entries in leaderboard files
 - make bot select leaderboardlimit dynamicly
-- split laptimes to list of objects
 - find online profanity list to use by default
