@@ -826,6 +826,7 @@ def format_webhook(combined_server_path_rel: str, main_loop_counter: int, shmoov
             fields_in_loop = []
 
     if fields_in_loop:
+        fields_in_loop.append(fields_post)
         list_of_fields.append(fields_in_loop)
     
     send_message_counter = main_loop_counter - 1
