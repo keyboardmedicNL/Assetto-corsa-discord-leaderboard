@@ -104,9 +104,5 @@ class_cfg: # a dict of class names with its containing car file names to sort yo
 
 * to remove an entry from the leaderboards delete the entry in the corresponding file (leaderboard.txt or laptimes.txt in the server root) and delete the corresponding log line in the logs
 
-# FAQ
-## my script shows an http status code 429 on trying to post a message to discord, what does this mean?
-This means your leaderboard is too big for discord, either reduce the amount of classes you use, the amount of stages or decrease the leaderboardlimit in the config
-
 # disclaimer
 scripts are written by an amateur, use at your own risk...
