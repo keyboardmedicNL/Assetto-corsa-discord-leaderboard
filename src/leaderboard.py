@@ -20,6 +20,9 @@ import config_loader
 
 configp = configparser.ConfigParser(strict=False)
 
+embed_char_limit = 4500
+embed_fields_limit = 18
+
 color_list = [
     0xA4C400,
     0x60A917,
@@ -505,6 +508,7 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
         classname = list(classcfg)[i]
         class_scores = []
         class_scores_object= {}
+        class_scores_str = ""
         
         scorelength = len(score)
         scorecounter = 0
@@ -518,6 +522,7 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
             scorelength = config.leaderboard_limit
         
         for classcore in score:
+            
             scorecounter = scorecounter + 1
             
             if scorecounter <= scorelength:
@@ -539,7 +544,7 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
                     score_format = f"{minutes}:{seconds}"
 
                     # sets name of entry to correct value for sectors or just laptimes with or without classes
-                    if score_type:
+                    if not score_type == "shmoovin not found":
                         if str(classname) != "none":
                             combined_score_name = f"{score_type} {classname} Times"
                         else:
@@ -569,28 +574,28 @@ def format_scores(scores, classcfg, score_type: str, show_input_discord: bool, u
                 short_name = str(classcore[1])[0:6]
                 html_score_format = f"<b>{short_name}</b> {score_format}"
                 finallist_html.append(f"<div class=\"namebox\">\n<p>{scorecounter}. {html_score_format}</p>\n</div>\n")
-            
+
+                total_length = 0
+                class_scores_str = ""
+                for entry in class_scores:
+                    total_length = total_length + len(entry)
+
+                    if total_length < 1024:
+                        class_scores_str = class_scores_str + str(entry)    
+                    else:
+                        break
+
             else:
                 break
 
-    total_length = 0
-    class_scores_str = ""
-    for entry in class_scores:
-        total_length = total_length + len(entry)
-
-        if total_length < 1024:
-            class_scores_str = class_scores_str + str(entry)    
-        else:
-            break
-
-    if class_scores_str:
-        class_scores_object = {"name":combined_score_name,"value":class_scores_str}
-        finallist.append(class_scores_object)
+        if class_scores_str:
+            class_scores_object = {"name":combined_score_name,"value":class_scores_str}
+            finallist.append(class_scores_object)
 
     finalstr_html = "".join(finallist_html)
     
     if not finallist:
-        finalstr_html = "<div class=\"namebox\">\n<p>NA</p>\n</div>\n"
+        finalstr_html = "<div class=\"namebox\">\n<p>No scores found</p>\n</div>\n"
     
     logging.debug(f"formatted scores for discord = \n{finallist}")
     logging.debug(f"formatted scores for html = \n{finalstr_html}")
@@ -714,7 +719,7 @@ def edit_html(file: str, html: str):
             html_file.write(html)
             logging.debug(f"created html in {file}, with content\n{html}")
 
-def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: list, show_times: bool, show_shmoovin: bool, show_sectors: bool, shmoovin_type: str):
+def format_webhook(combined_server_path_rel: str, main_loop_counter: int, shmoovin_score : str, lap_times: str, sector_times: list, show_times: bool, show_shmoovin: bool, show_sectors: bool, shmoovin_type: str) -> int:
     logging.debug(f"attempting to send scores to discord for server {combined_server_path_rel}")
 
     server_cfg_file =  os.path.join(combined_server_path_rel,"cfg","server_cfg.ini")
@@ -765,6 +770,7 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
     else:
         color = color_list[main_loop_counter]
 
+    # builds fields_combined
     field_basics = [
             {
                 "name": f":race_car:",
@@ -787,38 +793,58 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
             }
         ]
 
-    fields_post = [
-            {
+    fields_post = {
                 "name": "",
                 "value": "[***get this bot***](https://github.com/keyboardmedicNL/Assetto-corsa-discord-leaderboard)"
             }
-        ]
-
+        
     fields_sectors = []
     for sectors in sector_times:
             for sector_entry in sectors:
                 fields_sectors.append(sector_entry)
 
-    # returns correct format based on selected parameters
-    if not config.only_leaderboards:
-        logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
+    fields_combined = lap_times + fields_sectors + shmoovin_score
+
+    # builds list of list of field entries to send to webhooks
+    total_length = 0
+    entry_count = 0
+    list_of_fields = []
+    fields_in_loop = []
+    
+    for entry in fields_combined:
+
+        if not total_length >= embed_char_limit and not entry_count >= embed_fields_limit:
+            entry_count = entry_count + 1
+            total_length = total_length + len(entry["value"])
+            fields_in_loop.append(entry)
+
+        else:
+            total_length = 0
+            entry_count = 0
+            fields_in_loop.append(fields_post)
+            list_of_fields.append(fields_in_loop)
+            fields_in_loop = []
+
+    if fields_in_loop:
+        list_of_fields.append(fields_in_loop)
+    
+    send_message_counter = main_loop_counter - 1
+    
+    
+    # loops over list of created fields and sends them all to a seperate embed
+    for i, entry in enumerate(list_of_fields):
+        send_message_counter = send_message_counter + 1
+
+        if not config.only_leaderboards and i < 1:
+            logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
         
-        fields = field_basics + lap_times + fields_sectors + shmoovin_score + fields_post
+            fields = field_basics + entry
+
+        else:
+            logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
         
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "color": color,
-                    "fields": fields,
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
-    else:
-        logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
-        
-        fields = lap_times + fields_sectors + shmoovin_score + fields_post
-        
+            fields = entry
+
         data = {"embeds": [
                 {
                     "title": name,
@@ -829,19 +855,24 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
                 }
             ]}
     
+        send_to_web_hook(send_message_counter, data)
+
+    return(send_message_counter)
+
+def send_to_web_hook(send_message_counter: int, data: any,):
+
     # checks if leaderboard message was allready created and updates it
-    if exists(f"config/messages/{main_loop_counter}.txt"):
+    if exists(f"config/messages/{send_message_counter}.txt"):
         
-        with open(f"config/messages/{main_loop_counter}.txt") as File:
+        with open(f"config/messages/{send_message_counter}.txt") as File:
             messageid = str(File.readline())
-            logging.debug(f"messageid: {messageid} read from {main_loop_counter}.txt")
+            logging.debug(f"messageid: {messageid} read from {send_message_counter}.txt")
             logging.debug(f"json data being send to webhook is: \n{data}\n")
 
         request_url_combined = f"{config.web_hook_url}/messages/{messageid}"
         requests_error_handler.handle_request_error(request_type="patch", request_url=request_url_combined, request_json=data, request_params={'wait': 'true'})
 
     # creates leaderboard message if not allready created
-    
     else:
         logging.debug(f"json data being send to webhook is: \n{data}\n")
 
@@ -852,10 +883,10 @@ def send_to_web_hook(combined_server_path_rel: str, main_loop_counter: int, shmo
         if not exists("config/messages"):
             os.mkdir("config/messages")
         
-        with open(f"config/messages/{main_loop_counter}.txt", 'w') as File:
+        with open(f"config/messages/{send_message_counter}.txt", 'w') as File:
             File.write(f"{messageid}")
             
-        logging.debug(f"{messageid} saved in file {main_loop_counter}.txt")
+        logging.debug(f"{messageid} saved in file {send_message_counter}.txt")
 
 def delete_message(main_loop_counter: int):
     logging.debug(f"checking if messages need to be deleted if unused") 
@@ -872,7 +903,7 @@ def delete_message(main_loop_counter: int):
             time.sleep(1)
 
             request_url_combined = f"{config.web_hook_url}/messages/{message_id}"
-            request_json = requests_error_handler.handle_request_error(request_type="delete", request_url=request_url_combined, request_params={'wait': 'true'}, status_type_ok=[204])
+            request_json = requests_error_handler.handle_request_error(request_type="delete", request_url=request_url_combined, request_params={'wait': 'true'}, status_type_ok=[404])
 
             os.remove(f"config/messages/{message}")
             
@@ -933,15 +964,15 @@ def main():
                     class_cfg, show_times, show_shmoovin, show_sectors = get_server_cfg(combined_server_path_rel)
 
                     laptimes_discord = "NA"
-                    laptimes_html = "NA"
+                    laptimes_html = "<div class=\"namebox\">\n<p>No scores recorded</p>\n</div>\n"
                     main_loop_counter = main_loop_counter+1
                     
                     sector_times_discord = []
-                    sector_times_html = "NA"
+                    sector_times_html = "<div class=\"namebox\">\n<p>No scores recorded</p>\n</div>\n"
 
                     shmoovin_score_discord = []
-                    shmoovin_score_html = "NA"
-                    shmoovin_type = ""
+                    shmoovin_score_html = "<div class=\"namebox\">\n<p>No scores recorded</p>\n</div>\n"
+                    shmoovin_type = "shmoovin not found"
 
                     if server_type == "AssettoServer":
 
@@ -988,7 +1019,7 @@ def main():
                     laptimes_raw = sort_score("laptimes.txt", class_cfg, combined_server_path_rel)
                     laptimes_discord, laptimes_html = format_scores(laptimes_raw, class_cfg, "", config.show_input, config.use_short_name, server_type)
                     
-                    send_to_web_hook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors, shmoovin_type)
+                    main_loop_counter = format_webhook(combined_server_path_rel, main_loop_counter, shmoovin_score_discord, laptimes_discord,sector_times_discord, show_times, show_shmoovin, show_sectors, shmoovin_type)
                     send_to_html(shmoovin_score_html, laptimes_html, sector_times_html, shmoovin_type, combined_server_path_rel, server_folder)
                 
             
