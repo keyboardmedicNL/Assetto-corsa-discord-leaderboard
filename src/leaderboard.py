@@ -829,36 +829,43 @@ def format_webhook(combined_server_path_rel: str, main_loop_counter: int, shmoov
         fields_in_loop.append(fields_post)
         list_of_fields.append(fields_in_loop)
     
-    send_message_counter = main_loop_counter - 1
-    
-    
     # loops over list of created fields and sends them all to a seperate embed
-    for i, entry in enumerate(list_of_fields):
-        send_message_counter = send_message_counter + 1
-
-        if not config.only_leaderboards and i < 1:
-            logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
+    if list_of_fields:
+        send_message_counter = main_loop_counter - 1
         
-            fields = field_basics + entry
-
-        else:
-            logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
-        
-            fields = entry
-
-        data = {"embeds": [
-                {
-                    "title": name,
-                    "description":"",
-                    "color": color,
-                    "fields": fields,
-                        "timestamp": datetime.datetime.now(timezone.utc).isoformat()
-                }
-            ]}
+        for i, entry in enumerate(list_of_fields):
+            send_message_counter = send_message_counter + 1
+            format_webhook_second_stage(entry, field_basics, send_message_counter, combined_server_path_rel, name, color, i)     
     
-        send_to_web_hook(send_message_counter, data)
+    else:
+        send_message_counter = main_loop_counter
+        format_webhook_second_stage(list_of_fields, field_basics, send_message_counter, combined_server_path_rel, name, color)     
 
     return(send_message_counter)
+
+def format_webhook_second_stage(entry, field_basics, send_message_counter, combined_server_path_rel, name, color, i=0):
+
+    if not config.only_leaderboards and i < 1:
+        logging.debug(f"posting/updating message with full server info, shmoovin and laptimes for server {combined_server_path_rel}")
+        
+        fields = field_basics + entry
+
+    else:
+        logging.debug(f"posting/updating message with shmoovin and laptimes for server {combined_server_path_rel}")
+        
+        fields = entry
+
+    data = {"embeds": [
+            {
+                "title": name,
+                "description":"",
+                "color": color,
+                "fields": fields,
+                    "timestamp": datetime.datetime.now(timezone.utc).isoformat()
+            }
+        ]}
+    
+    send_to_web_hook(send_message_counter, data)
 
 def send_to_web_hook(send_message_counter: int, data: any,):
 

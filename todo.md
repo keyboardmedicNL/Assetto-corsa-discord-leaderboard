@@ -1,0 +1,1 @@
+- add leaderboardlimit display to embeds
